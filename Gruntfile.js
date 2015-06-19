@@ -8,7 +8,7 @@ module.exports = function(grunt) {
         files: [{
           expand: true,
           cwd: './',
-          src: ['trello-json-to-markdown.js', 'get-boards.js']
+          src: ['server.js']
         }]
       }
     }
