@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 app.post('/', function (req, res) {
   console.log(req.body);
-  res.send({ status: 'I have received the message.' })
+  res.send({status: 'I have received the message.'});
 });
 
 var server = app.listen(process.env.PORT);
