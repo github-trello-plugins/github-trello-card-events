@@ -13,4 +13,5 @@ app.post('/', function (req, res) {
   res.send({ status: 'I have received the message.' })
 });
 
-var server = app.listen(8080);
+var server = app.listen(process.env.PORT);
+
