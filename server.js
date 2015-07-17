@@ -48,7 +48,7 @@ app.post('/', function (req, res) {
         branch = branch.replace(/\s+/g, '-');
       }
 
-      // Convert it all to lowercase since that's how it's most likely will appear on GitHub
+      // Convert it all to lowercase since that's how it most likely will appear on GitHub
       branch = branch.toLowerCase();
 
       // Next, we'll grab the number out of the branch, which is the card number
