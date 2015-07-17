@@ -155,6 +155,8 @@ function moveCard() {
 
                       cardID = cardJSON.id;
                       console.log('Placing \'' + cardJSON.name + '\' into \'' + listName + '\'');
+                      // TODO: After card is placed into the list, comment on the card with a message similar to:
+                      // TODO: 'Merged by User'
                       putCardInList(cardID, listID);
                     }
                   }
