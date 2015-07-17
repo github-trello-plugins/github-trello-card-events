@@ -29,6 +29,7 @@
     "space-in-brackets": [2, "never"],
     "space-in-parens": 0,
     "strict": 0,
-    "quotes": 0
+    "quotes": 0,
+    "eqeqeq": 0
   }
 }
