@@ -82,7 +82,7 @@ app.post('/', function (req, res) {
             break;
           case 'reopened':
             break;
-          case 'synchronize':
+          case 'synchronized':
             break;
           // The created action is for when a pull request review comment event occurs
           case 'created':
