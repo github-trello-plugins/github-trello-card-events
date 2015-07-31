@@ -21,6 +21,11 @@ var server = app.listen(process.env.PORT, function () {
   console.log('Listening at http://%s:%s', server.address().address, server.address().port);
 });
 
+app.get('/', function () {
+  console.log('get');
+  res.send('Hi');
+});
+
 app.post('/', function (req, res) {
   //console.log(req.body);
   res.send({status: 'Received'});
