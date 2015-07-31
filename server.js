@@ -22,8 +22,7 @@ var server = app.listen(process.env.PORT, function () {
 });
 
 app.post('/', function (req, res) {
-  //console.log(req.body);
-  res.send({status: 'Received'});
+  //res.send({status: 'Received'});
 
   var pullRequestTitle = req.body.pull_request.title;
 
@@ -62,6 +61,7 @@ app.post('/', function (req, res) {
 
         board = branch.slice(0, branch.length - cardNumber.length - 1);
         console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
+        res.send({status: 'Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board});
 
         var action = req.body.action;
         // Now that we have all the information we can get, update the card on Trello
