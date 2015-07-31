@@ -133,7 +133,7 @@ function moveCard() {
       var foundBoard = false;
       for (var i = 0; i < boardsJSON.length && !foundBoard; i++) {
         var boardJSON = boardsJSON[i];
-        if (boardJSON.name === board) {
+        if (boardJSON.name.toLowerCase() === board) {
           foundBoard = true;
           boardID = boardJSON.id;
 
