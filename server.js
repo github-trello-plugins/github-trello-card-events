@@ -14,6 +14,7 @@ var cardID;
 var boardID;
 var listID;
 var listName;
+var gitHubUser;
 
 app.use(bodyParser.json());
 
@@ -59,6 +60,7 @@ app.post('/', function (req, res) {
       // a way that we are possibly able to find the corresponding card on Trello
       if (cardNumber) {
 
+        gitHubUser = req.body.pull_request.user.login;
         board = branch.slice(0, branch.length - cardNumber.length - 1);
         console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
 
@@ -111,6 +113,7 @@ function putCardInList(cardID, listID) {
       console.log(error);
     } else {
       console.log(data);
+      commentOnCard(cardID, 'Merged by ' + gitHubUser);
     }
   });
 }
@@ -168,4 +171,12 @@ function moveCard() {
   });
 }
 
-
+function commentOnCard(cardID, message) {
+  trello.post('/1/cards/' + cardID + '/actions/comments?text=' + message, function (error, data) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log(data);
+    }
+  });
+}
