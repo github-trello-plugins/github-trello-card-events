@@ -146,22 +146,15 @@ function moveCard() {
 
               listName = listJSON.name;
               listID = listJSON.id;
-              trello.get('/1/boards/' + boardID + '/cards?limit=1000', function (error, cardsJSON) {
+
+              trello.get('/1/boards/' + boardID + '/cards/' + cardNumber, function (error, cardJSON) {
                 if (error) {
                   console.log(error);
                 } else {
-                  var foundCard = false;
-                  for (var k = 0; k < cardsJSON.length && !foundCard; k++) {
-                    var cardJSON = cardsJSON[k];
-                    if (cardJSON.idShort == cardNumber) {
-                      foundCard = true;
+                  cardID = cardJSON.id;
+                  console.log('Placing \'' + cardJSON.name + '\' into \'' + listName + '\'');
 
-                      cardID = cardJSON.id;
-                      console.log('Placing \'' + cardJSON.name + '\' into \'' + listName + '\'');
-
-                      putCardInList(cardID, listID);
-                    }
-                  }
+                  putCardInList(cardID, listID);
                 }
               });
             }
