@@ -25,78 +25,80 @@ var server = app.listen(process.env.PORT, function () {
 app.post('/', function (req, res) {
   res.send({status: 'Received'});
 
-  var pullRequestTitle = req.body.pull_request.title;
+  if (req.body.pull_request.merged_at) {
 
-  // Regex would most likely be best in this situation. Since the naming convention for pull requests is not set,
-  // pull request names are inconsistent. All we know is that everything up to and including the first number is
-  // a representation of the branch to be merged from.
+    var pullRequestTitle = req.body.pull_request.title;
 
-  var branchRegex = /\D+\d+/g;
-  try {
-    // Grab everything up until and including the first number
-    branch = branchRegex.exec(pullRequestTitle)[0];
+    // Regex would most likely be best in this situation. Since the naming convention for pull requests is not set,
+    // pull request names are inconsistent. All we know is that everything up to and including the first number is
+    // a representation of the branch to be merged from.
 
-    // If we were successful at getting the branch name, go ahead and continue
-    if (branch) {
+    var branchRegex = /\D+\d+/g;
+    try {
+      // Grab everything up until and including the first number
+      branch = branchRegex.exec(pullRequestTitle)[0];
 
-      // Trim the branch name of any possible leading/trailing whitespaces
-      branch = branch.trim();
+      // If we were successful at getting the branch name, go ahead and continue
+      if (branch) {
 
-      // If there are any whitespaces in between words, replace the whitespaces in between the words
-      // with a hyphen. Ex: 'this   is a    branch 50' will be 'this-is-a-branch-50'
-      if (branch.indexOf(' ') >= 0) {
-        branch = branch.replace(/\s+/g, '-');
-      }
+        // Trim the branch name of any possible leading/trailing whitespaces
+        branch = branch.trim();
 
-      // Convert it all to lowercase since that's how it most likely will appear on GitHub
-      branch = branch.toLowerCase();
-
-      // Next, we'll grab the number out of the branch, which is the card number
-      // The card number is also the short ID of the Trello card (attribute is idShort)
-      var cardNumberRegex = /\d+/g;
-      cardNumber = cardNumberRegex.exec(branch)[0];
-
-      // If we were successful in getting the card number, that means the pull request was named in such
-      // a way that we are possibly able to find the corresponding card on Trello
-      if (cardNumber) {
-
-        gitHubUser = req.body.pull_request.user.login;
-        board = branch.slice(0, branch.length - cardNumber.length - 1);
-        console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
-
-        var action = req.body.action;
-        // Now that we have all the information we can get, update the card on Trello
-
-        switch (action) {
-          case 'assigned':
-            break;
-          case 'unassigned':
-            break;
-          case 'labeled':
-            break;
-          case 'unlabeled':
-            break;
-          case 'opened':
-            break;
-          case 'closed':
-            moveCard();
-            break;
-          case 'reopened':
-            break;
-          case 'synchronized':
-            break;
-          // The created action is for when a pull request review comment event occurs
-          case 'created':
-            break;
+        // If there are any whitespaces in between words, replace the whitespaces in between the words
+        // with a hyphen. Ex: 'this   is a    branch 50' will be 'this-is-a-branch-50'
+        if (branch.indexOf(' ') >= 0) {
+          branch = branch.replace(/\s+/g, '-');
         }
+
+        // Convert it all to lowercase since that's how it most likely will appear on GitHub
+        branch = branch.toLowerCase();
+
+        // Next, we'll grab the number out of the branch, which is the card number
+        // The card number is also the short ID of the Trello card (attribute is idShort)
+        var cardNumberRegex = /\d+/g;
+        cardNumber = cardNumberRegex.exec(branch)[0];
+
+        // If we were successful in getting the card number, that means the pull request was named in such
+        // a way that we are possibly able to find the corresponding card on Trello
+        if (cardNumber) {
+
+          gitHubUser = req.body.pull_request.user.login;
+          board = branch.slice(0, branch.length - cardNumber.length - 1);
+          console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
+
+          var action = req.body.action;
+          // Now that we have all the information we can get, update the card on Trello
+
+          switch (action) {
+            case 'assigned':
+              break;
+            case 'unassigned':
+              break;
+            case 'labeled':
+              break;
+            case 'unlabeled':
+              break;
+            case 'opened':
+              break;
+            case 'closed':
+              moveCard();
+              break;
+            case 'reopened':
+              break;
+            case 'synchronized':
+              break;
+            // The created action is for when a pull request review comment event occurs
+            case 'created':
+              break;
+          }
+        }
+
       }
 
+    } catch (error) {
+      console.log('The pull request name is not formatted in a way to be found on Trello');
     }
-
-  } catch (error) {
-    console.log('The pull request name is not formatted in a way to be found on Trello');
   }
-
 });
 
 /**
