@@ -87,7 +87,6 @@ app.post('/', function (req, res) {
           case 'created':
             break;
         }
-        moveCard();
       }
 
     }
