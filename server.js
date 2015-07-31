@@ -62,7 +62,7 @@ app.post('/', function (req, res) {
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
 
-          gitHubUser = req.body.pull_request.user.login;
+          gitHubUser = req.body.pull_request.merged_by.login;
           board = branch.slice(0, branch.length - cardNumber.length - 1);
           console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
 
