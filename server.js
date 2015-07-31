@@ -25,7 +25,7 @@ var server = app.listen(process.env.PORT, function () {
 app.post('/', function (req, res) {
   res.send({status: 'Received'});
 
-  if (req.body.pull_request.merged_at) {
+  if (req.body.pull_request && req.body.pull_request.merged_at) {
 
     var pullRequestTitle = req.body.pull_request.title;
 
