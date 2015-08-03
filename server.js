@@ -91,6 +91,9 @@ app.post('/', function (req, res) {
               }
               break;
             case 'reopened':
+              list = process.env.PR_OPEN_DEST_LIST;
+              gitHubUser = req.body.pull_request.user.login;
+              moveCard(false);
               break;
             case 'synchronized':
               break;
