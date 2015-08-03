@@ -124,6 +124,7 @@ function putCardInList(cardID, listID, merged) {
  * Upon certain pull request actions, this will move the card in the request into a
  * specified list
  *
+ * @param merged - True if event is a merge, false if it is an open
  */
 function moveCard(merged) {
   trello.get('/1/members/me/boards?lists=all', function (error, boardsJSON) {
@@ -170,6 +171,12 @@ function moveCard(merged) {
   });
 }
 
+/**
+ * Leaves a comment on a card
+ *
+ * @param cardID - ID of the card to be commented on
+ * @param message - Message content of the comment
+ */
 function commentOnCard(cardID, message) {
   trello.post('/1/cards/' + cardID + '/actions/comments?text=' + message, function (error, data) {
     if (error) {
