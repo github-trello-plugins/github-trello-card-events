@@ -123,7 +123,7 @@ function putCardInList(cardID, listID, merged) {
       console.log(error);
     } else {
       console.log(data);
-      commentOnCard(cardID, (merged ? 'Merged ' : 'Opened ') + 'by ' + gitHubUser);
+      commentOnCard(cardID, 'Pull request ' + (merged ? 'merged' : 'opened') + ' by ' + gitHubUser);
     }
   });
 }
