@@ -41,17 +41,9 @@ app.post('/', function (req, res) {
       // If we were successful at getting the branch name, go ahead and continue
       if (branch) {
 
-        // Trim the branch name of any possible leading/trailing whitespaces
-        branch = branch.trim();
-
-        // If there are any whitespaces in between words, replace the whitespaces in between the words
-        // with a hyphen. Ex: 'this   is a    branch 50' will be 'this-is-a-branch-50'
-        if (branch.indexOf(' ') >= 0) {
-          branch = branch.replace(/\s+/g, '-');
-        }
-
-        // Convert it all to lowercase since that's how it most likely will appear on GitHub
-        branch = branch.toLowerCase();
+        // Trim the branch name of any possible leading/trailing whitespaces, replace any non alphanumeric characters
+        // with '-', and convert it all to lowercase
+        branch = branch.trim().replace(/\W+/g, '-').toLowerCase();
 
         // Next, we'll grab the number out of the branch, which is the card number
         // The card number is also the short ID of the Trello card (attribute is idShort)
