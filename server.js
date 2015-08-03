@@ -6,7 +6,7 @@ var devKey = process.env.DEV_KEY;
 var appToken = process.env.APP_TOKEN;
 var trello = new Trello(devKey, appToken);
 
-var list = process.env.DESTINATION_LIST;
+var list;
 var branch;
 var board;
 var cardNumber;
@@ -25,7 +25,7 @@ var server = app.listen(process.env.PORT, function () {
 app.post('/', function (req, res) {
   res.send({status: 'Received'});
 
-  if (req.body.pull_request && req.body.pull_request.merged_at) {
+  if (req.body.pull_request) {
 
     var pullRequestTitle = req.body.pull_request.title;
 
@@ -62,7 +62,6 @@ app.post('/', function (req, res) {
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
 
-          gitHubUser = req.body.pull_request.merged_by.login;
           board = branch.slice(0, branch.length - cardNumber.length - 1);
           console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
 
@@ -79,9 +78,17 @@ app.post('/', function (req, res) {
             case 'unlabeled':
               break;
             case 'opened':
+              list = process.env.PR_OPEN_DEST_LIST;
+              gitHubUser = req.body.pull_request.user.login;
+              moveCard(false);
               break;
             case 'closed':
-              moveCard();
+              // Merged
+              if (req.body.pull_request.merged_at) {
+                list = process.env.PR_MERGE_DEST_LIST;
+                gitHubUser = req.body.pull_request.merged_by.login;
+                moveCard(true);
+              }
               break;
             case 'reopened':
               break;
@@ -92,9 +99,7 @@ app.post('/', function (req, res) {
               break;
           }
         }
-
       }
-
     } catch (error) {
       console.log('The pull request name is not formatted in a way to be found on Trello');
     }
@@ -102,20 +107,20 @@ app.post('/', function (req, res) {
 });
 
 /**
- *
  * Moves the card with the specified ID from its current list to the list with the
  * specified ID.
  *
- * @param {string} cardID - ID of the Trello card
- * @param {string} listID - ID of the Trello list
+ * @param cardID - ID of the Trello card
+ * @param listID - ID of the Trello list
+ * @param merged - True if event is a merge, false if it is an open
  */
-function putCardInList(cardID, listID) {
+function putCardInList(cardID, listID, merged) {
   trello.put('/1/cards/' + cardID, {idList: listID}, function (error, data) {
     if (error) {
       console.log(error);
     } else {
       console.log(data);
-      commentOnCard(cardID, 'Merged by ' + gitHubUser);
+      commentOnCard(cardID, (merged ? 'Merged ' : 'Opened ') + 'by ' + gitHubUser);
     }
   });
 }
@@ -125,7 +130,7 @@ function putCardInList(cardID, listID) {
  * specified list
  *
  */
-function moveCard() {
+function moveCard(merged) {
   trello.get('/1/members/me/boards?lists=all', function (error, boardsJSON) {
     if (error) {
       console.log(error);
@@ -151,10 +156,15 @@ function moveCard() {
                 if (error) {
                   console.log(error);
                 } else {
-                  cardID = cardJSON.id;
-                  console.log('Placing \'' + cardJSON.name + '\' into \'' + listName + '\'');
+                  // If it's already in the list, do not attempt to move it
+                  if (cardJSON.idList === listID) {
+                    console.log(cardJSON.name + ' is already in ' + listName);
+                  } else {
+                    cardID = cardJSON.id;
+                    console.log('Placing \'' + cardJSON.name + '\' into \'' + listName + '\'');
 
-                  putCardInList(cardID, listID);
+                    putCardInList(cardID, listID, merged);
+                  }
                 }
               });
             }
