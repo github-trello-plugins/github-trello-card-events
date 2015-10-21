@@ -7,7 +7,8 @@ var appToken = process.env.APP_TOKEN;
 var trello = new Trello(devKey, appToken);
 
 var list;
-var branch;
+var pullRequestFromBranch;
+var pullRequestToBranch;
 var board;
 var cardNumber;
 var cardID;
@@ -23,39 +24,33 @@ var server = app.listen(process.env.PORT, function () {
 });
 
 app.post('/', function (req, res) {
-  res.send({status: 'Received'});
+  res.send({status: "Request"});
 
-  if (req.body.pull_request) {
+  var pullRequest = req.body.pull_request;
 
-    var pullRequestTitle = req.body.pull_request.title;
+  if (pullRequest) {
 
-    // Regex would most likely be best in this situation. Since the naming convention for pull requests is not set,
-    // pull request names are inconsistent. All we know is that everything up to and including the first number is
-    // a representation of the branch to be merged from.
+    pullRequestFromBranch = pullRequest.head.ref;
+    pullRequestToBranch = pullRequest.base.ref;
 
-    var branchRegex = /\D+\d+/g;
     try {
-      // Grab everything up until and including the first number
-      branch = branchRegex.exec(pullRequestTitle)[0];
-
-      // If we were successful at getting the branch name, go ahead and continue
-      if (branch) {
+      if (pullRequestFromBranch && pullRequestToBranch && pullRequestToBranch !== "review") {
 
         // Trim the branch name of any possible leading/trailing whitespaces, replace any non alphanumeric characters
         // with '-', and convert it all to lowercase
-        branch = branch.trim().replace(/\W+/g, '-').toLowerCase();
+        pullRequestFromBranch = pullRequestFromBranch.trim().replace(/\W+/g, '-').toLowerCase();
 
         // Next, we'll grab the number out of the branch, which is the card number
         // The card number is also the short ID of the Trello card (attribute is idShort)
         var cardNumberRegex = /\d+/g;
-        cardNumber = cardNumberRegex.exec(branch)[0];
+        cardNumber = cardNumberRegex.exec(pullRequestFromBranch)[0];
 
-        // If we were successful in getting the card number, that means the pull request was named in such
+        // If we were successful in getting the card number, that means the pull request branch was named in such
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
 
-          board = branch.slice(0, branch.length - cardNumber.length - 1);
-          console.log('Card #' + cardNumber + '\nBranch: ' + branch + '\nBoard: ' + board);
+          board = pullRequestFromBranch.slice(0, pullRequestFromBranch.length - cardNumber.length - 1);
+          console.log('Card #' + cardNumber + '\nBranch: ' + pullRequestFromBranch + '\nBoard: ' + board);
 
           var action = req.body.action;
           // Now that we have all the information we can get, update the card on Trello
@@ -71,20 +66,20 @@ app.post('/', function (req, res) {
               break;
             case 'opened':
               list = process.env.PR_OPEN_DEST_LIST;
-              gitHubUser = req.body.pull_request.user.login;
+              gitHubUser = pullRequest.user.login;
               moveCard(false);
               break;
             case 'closed':
               // Merged
-              if (req.body.pull_request.merged_at) {
+              if (pullRequest.merged_at) {
                 list = process.env.PR_MERGE_DEST_LIST;
-                gitHubUser = req.body.pull_request.merged_by.login;
+                gitHubUser = pullRequest.merged_by.login;
                 moveCard(true);
               }
               break;
             case 'reopened':
               list = process.env.PR_OPEN_DEST_LIST;
-              gitHubUser = req.body.pull_request.user.login;
+              gitHubUser = pullRequest.user.login;
               moveCard(false);
               break;
             case 'synchronized':
