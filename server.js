@@ -24,6 +24,7 @@ var server = app.listen(process.env.PORT, function () {
 });
 
 app.post('/', function (req, res) {
+  res.send({status: "Request received"});
 
   var pullRequest = req.body.pull_request;
 
@@ -31,8 +32,6 @@ app.post('/', function (req, res) {
 
     pullRequestFromBranch = pullRequest.head.ref;
     pullRequestToBranch = pullRequest.base.ref;
-
-    res.send({status: "Request: from " + pullRequestFromBranch + " to " + pullRequestToBranch});
 
     try {
       if (pullRequestFromBranch && pullRequestToBranch && pullRequestToBranch !== "review") {
