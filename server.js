@@ -170,7 +170,12 @@ app.post('/', (req, res) => {
               });
             }
             default:
-              break;
+              return res.json({
+                ok: true,
+                ignored: true,
+                sourceBranch,
+                destinationBranch,
+              });
           }
         }
       }
