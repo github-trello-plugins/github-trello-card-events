@@ -1,0 +1,4 @@
+# Wait 5s between checks
+WAIT=5
+ATTEMPTS=60
+/healthcheck true

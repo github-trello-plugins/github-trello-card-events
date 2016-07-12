@@ -10,21 +10,25 @@
   ],
   "version": "0.0.1",
   "engines": {
-    "node": "0.10.x"
+    "node": "6.x.x"
   },
   "dependencies": {
-    "body-parser": "^1.13.1",
-    "express": "^4.12.4",
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "lodash": "^4.13.1",
     "node-trello": "^1.1.2"
   },
   "devDependencies": {
-    "eslint": "^0.22.1",
+    "eslint": "^3.0.1",
+    "eslint-config-airbnb-base": "^4.0.0",
+    "eslint-plugin-import": "^1.10.2",
     "grunt": "^0.4.5",
-    "grunt-eslint": "^14.0.0"
+    "grunt-eslint": "^19.0.0"
   },
   "main": "server.js",
   "license": "BSD-3-Clause",
   "scripts": {
+    "start": "node server.js",
     "postinstall": "mkdir -p .git/hooks && cp -f git-hooks/pre-commit .git/hooks/ && chmod 755 .git/hooks/pre-commit"
   },
   "repository": "https://github.com/mpirik/github-trello-card-events.git"

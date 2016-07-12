@@ -9,7 +9,11 @@ module.exports = function(grunt) {
           expand: true,
           cwd: './',
           src: ['server.js']
-        }]
+        }],
+        options: {
+          cache: true,
+          fix: true,
+        },
       }
     }
   });
