@@ -4,7 +4,6 @@
 const _ = require('lodash');
 /* eslint-enable id-length */
 const co = require('co');
-const promisify = require('es6-promisify');
 const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
@@ -12,9 +11,42 @@ const Trello = require('node-trello');
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const trello = new Trello(devKey, appToken);
-const trelloGet = promisify(trello.get);
-const trelloPost = promisify(trello.post);
-const trelloPut = promisify(trello.put);
+
+function trelloGet(...args) {
+  return new Promise((resolve, reject) => {
+    trello.get(...args, (err, ...results) => {
+      if (err) {
+        return reject(err);
+      }
+
+      return resolve(...results);
+    });
+  });
+}
+
+function trelloPost(...args) {
+  return new Promise((resolve, reject) => {
+    trello.post(...args, (err, ...results) => {
+      if (err) {
+        return reject(err);
+      }
+
+      return resolve(...results);
+    });
+  });
+}
+
+function trelloPut(...args) {
+  return new Promise((resolve, reject) => {
+    trello.put(...args, (err, ...results) => {
+      if (err) {
+        return reject(err);
+      }
+
+      return resolve(...results);
+    });
+  });
+}
 
 const listDestinationNameForOpenedCards = process.env.PR_OPEN_DEST_LIST || 'Review';
 const listDestinationNameForMergedCards = process.env.PR_MERGE_DEST_LIST || 'Deploy';
@@ -108,12 +140,15 @@ app.post('/pr', (req, res) => {
         // Next, we'll grab the number out of the branch, which is the card number
         // The card number is also the short ID of the Trello card (attribute is idShort)
         const cardNumberRegex = /\d+/g;
-        const cardNumber = cardNumberRegex.exec(sourceBranch)[0];
+        const cardNumberMatches = cardNumberRegex.exec(sourceBranch);
+        let cardNumber;
+        if (cardNumberMatches) {
+          cardNumber = cardNumberMatches[0];
+        }
 
         // If we were successful in getting the card number, that means the pull request branch was named in such
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
-
           const boardName = sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
           const action = req.body.action;
@@ -151,16 +186,14 @@ app.post('/pr', (req, res) => {
               destinationBranch,
               boardName,
             });
-
           }
-
-          return res.json({
-            ok: true,
-            ignored: true,
-            sourceBranch,
-            destinationBranch,
-          });
         }
+        return res.json({
+          ok: true,
+          ignored: true,
+          sourceBranch,
+          destinationBranch,
+        });
       }
     }).catch((ex) => {
       return res.status(500).json({
@@ -173,7 +206,7 @@ app.post('/pr', (req, res) => {
   } else {
     return res.status(400).json({
       ok: false,
-      err: 'Missing pull request body data',
+      err: new Error('Missing pull request body data'),
     });
   }
 });
@@ -184,31 +217,29 @@ app.post('/pr', (req, res) => {
  * @param {string} args.boardName - Name of the board
  * @param {string} args.listName - Name of the list to move the card to
  */
-function getBoardAndList(args) {
-  return co.wrap(function* getBoardAndList() {
-    const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
+function* getBoardAndList(args) {
+  const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
 
-    const board = _.find(boards, (item) => {
-      return item.name.toLowerCase() === args.boardName;
-    });
-
-    if (!board) {
-      throw new Error(`Unable to find board: ${args.boardName}`);
-    }
-
-    const list = _.find(board.lists, {
-      name: args.listName,
-    });
-
-    if (!list) {
-      throw new Error(`Unable to find list (${args.listName}) in board: ${args.boardName}`);
-    }
-
-    return {
-      board,
-      list,
-    };
+  const board = _.find(boards, (item) => {
+    return item.name.toLowerCase() === args.boardName;
   });
+
+  if (!board) {
+    throw new Error(`Unable to find board: ${args.boardName}`);
+  }
+
+  const list = _.find(board.lists, {
+    name: args.listName,
+  });
+
+  if (!list) {
+    throw new Error(`Unable to find list (${args.listName}) in board: ${args.boardName}`);
+  }
+
+  return {
+    board,
+    list,
+  };
 }
 
 /**
@@ -221,8 +252,7 @@ function getBoardAndList(args) {
  * @param {string} args.message - Message to add to the card on successful move
  * @returns {function<string>} Result message
  */
-function moveCard(args) {
-  return co.wrap(function* moveCard() {
+function* moveCard(args) {
     // If it's already in the list, do not attempt to move it
     if (args.card.idList === args.list.id) {
       return `Skipped. ${args.card.name} is already in ${args.list.name}`;
@@ -237,5 +267,4 @@ function moveCard(args) {
     }
 
     return `Moved '${args.card.name}' into '${args.list.name}'`;
-  });
 }
