@@ -3,6 +3,8 @@
 /* eslint-disable id-length */
 const _ = require('lodash');
 /* eslint-enable id-length */
+const co = require('co');
+const promisify = require('es6-promisify');
 const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
@@ -10,9 +12,13 @@ const Trello = require('node-trello');
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const trello = new Trello(devKey, appToken);
+const trelloGet = promisify(trello.get);
+const trelloPost = promisify(trello.post);
+const trelloPut = promisify(trello.put);
 
 const listDestinationNameForOpenedCards = process.env.PR_OPEN_DEST_LIST || 'Review';
 const listDestinationNameForMergedCards = process.env.PR_MERGE_DEST_LIST || 'Deploy';
+const listDestinationNameForDeployments = process.env.DEPLOY_DEST_LIST || 'Validate';
 let sourceBranch;
 let destinationBranch;
 
@@ -42,7 +48,49 @@ app.get('/healthcheck', (req, res) => {
   });
 });
 
-app.post('/', (req, res) => {
+app.get('/deploy', (req, res) => {
+  const boardName = req.param('board');
+
+  co(function* deploy() {
+    const boardAndList = yield getBoardAndList({
+      boardName,
+      listName: listDestinationNameForMergedCards,
+    });
+    const destinationList = _.find(boardAndList.board.lists, {
+      name: listDestinationNameForDeployments,
+    });
+
+    if (!destinationList) {
+      throw new Error(`Unable to find list (${listDestinationNameForDeployments}) in board: ${boardName}`);
+    }
+
+    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name`);
+
+    for (const card of cards) {
+      yield moveCard({
+        board: boardAndList.board,
+        list: destinationList,
+        card,
+        message: 'Deployed',
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: `Moved ${cards.length} cards to ${listDestinationNameForDeployments}`,
+      boardName,
+    });
+  }).catch((ex) => {
+    return res.status(500).json({
+      ok: false,
+      err: ex,
+      boardName,
+      listName: listDestinationNameForDeployments,
+    });
+  });
+});
+
+app.post('/pr', (req, res) => {
   const pullRequest = req.body.pull_request;
 
   if (pullRequest) {
@@ -50,7 +98,7 @@ app.post('/', (req, res) => {
     sourceBranch = pullRequest.head.ref;
     destinationBranch = pullRequest.base.ref;
 
-    try {
+    co(function* pr() {
       if (sourceBranch && destinationBranch && destinationBranch !== "review") {
 
         // Trim the branch name of any possible leading/trailing whitespaces, replace any non alphanumeric characters
@@ -71,122 +119,57 @@ app.post('/', (req, res) => {
           const action = req.body.action;
           // Now that we have all the information we can get, update the card on Trello
 
-          switch (action) {
-            case 'opened':
-            {
-              const githubUsername = pullRequest.user.login;
-              return moveCard({
-                boardName,
-                listName: listDestinationNameForOpenedCards,
-                cardNumber,
-                githubUsername,
-                merged: false,
-              }, (err, message) => {
-                if (err) {
-                  return res.status(500).json({
-                    ok: false,
-                    err,
-                    cardNumber,
-                    sourceBranch,
-                    destinationBranch,
-                    boardName,
-                  });
-                }
-
-                return res.json({
-                  ok: true,
-                  message,
-                  cardNumber,
-                  sourceBranch,
-                  destinationBranch,
-                  boardName,
-                });
-              });
+          if (['opened', 'closed', 'reopened'].includes(action)) {
+            let message;
+            let listName;
+            if (action === 'opened' || action === 'reopened') {
+              listName = listDestinationNameForOpenedCards;
+              message = `Pull request opened by ${pullRequest.user.login}`;
+            } else {
+              listName = listDestinationNameForMergedCards;
+              message = `Pull request merged by ${pullRequest.merged_by.login}`;
             }
-            case 'closed':
-            {
-              // Merged
-              if (pullRequest.merged_at) {
-                const githubUsername = pullRequest.merged_by.login;
-                return moveCard({
-                  boardName,
-                  listName: listDestinationNameForMergedCards,
-                  cardNumber,
-                  githubUsername,
-                  merged: true,
-                }, (err, message) => {
-                  if (err) {
-                    return res.status(500).json({
-                      ok: false,
-                      err,
-                      cardNumber,
-                      sourceBranch,
-                      destinationBranch,
-                      boardName,
-                    });
-                  }
 
-                  return res.json({
-                    ok: true,
-                    message,
-                    cardNumber,
-                    sourceBranch,
-                    destinationBranch,
-                    boardName,
-                  });
-                });
-              }
-              break;
-            }
-            case 'reopened':
-            {
-              const githubUsername = pullRequest.user.login;
-              return moveCard({
-                boardName,
-                listName: listDestinationNameForOpenedCards,
-                cardNumber,
-                githubUsername,
-                merged: false,
-              }, (err, message) => {
-                if (err) {
-                  return res.status(500).json({
-                    ok: false,
-                    err,
-                    cardNumber,
-                    sourceBranch,
-                    destinationBranch,
-                    boardName,
-                  });
-                }
+            const boardAndList = yield getBoardAndList({
+              boardName,
+              listName,
+            });
 
-                return res.json({
-                  ok: true,
-                  message,
-                  cardNumber,
-                  sourceBranch,
-                  destinationBranch,
-                  boardName,
-                });
-              });
-            }
-            default:
-              return res.json({
-                ok: true,
-                ignored: true,
-                sourceBranch,
-                destinationBranch,
-              });
+            const card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+
+            const moveCardResult = yield moveCard({
+              list: boardAndList.list,
+              card,
+              message,
+            });
+
+            return res.json({
+              ok: true,
+              message: moveCardResult,
+              cardNumber,
+              sourceBranch,
+              destinationBranch,
+              boardName,
+            });
+
           }
+
+          return res.json({
+            ok: true,
+            ignored: true,
+            sourceBranch,
+            destinationBranch,
+          });
         }
       }
-    } catch (err) {
+    }).catch((ex) => {
       return res.status(500).json({
         ok: false,
-        err,
+        err: ex,
         sourceBranch,
         destinationBranch,
       });
-    }
+    });
   }
 
   return res.status(400).json({
@@ -196,31 +179,21 @@ app.post('/', (req, res) => {
 });
 
 /**
- * Upon certain pull request actions, this will move the card in the request into a
- * specified list
- *
+ * Gets the board and list objects from the specified names
  * @param {Object} args - Arguments
  * @param {string} args.boardName - Name of the board
  * @param {string} args.listName - Name of the list to move the card to
- * @param {string} args.cardNumber - Card number
- * @param {string} args.githubUsername - github username
- * @param {boolean} args.merged - True if event is a merge, false if it is an open
- * @param {function} next - Callback
- * @param {function} [next.err] - Error
- * @param {function} [next.message] - Message
  */
-function moveCard(args, next) {
-  trello.get(`/1/members/me/boards?lists=all&fields=name`, (err, boards) => {
-    if (err) {
-      return next(err);
-    }
+function getBoardAndList(args) {
+  return co.wrap(function* getBoardAndList() {
+    const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
 
     const board = _.find(boards, (item) => {
       return item.name.toLowerCase() === args.boardName;
     });
 
     if (!board) {
-      return next(new Error(`Unable to find board: ${args.boardName}`));
+      throw new Error(`Unable to find board: ${args.boardName}`);
     }
 
     const list = _.find(board.lists, {
@@ -228,29 +201,41 @@ function moveCard(args, next) {
     });
 
     if (!list) {
-      return next(new Error(`Unable to find list (${args.listName}) in board: ${args.boardName}`));
+      throw new Error(`Unable to find list (${args.listName}) in board: ${args.boardName}`);
     }
 
-    trello.get(`/1/boards/${board.id}/cards/${args.cardNumber}`, (err, card) => {
-      if (err) {
-        return next(err);
-      }
-      // If it's already in the list, do not attempt to move it
-      if (card.idList === list.id) {
-        return next(null, `Skipped. ${card.name} is already in ${list.name}`);
-      }
+    return {
+      board,
+      list,
+    };
+  });
+}
 
-      trello.put(`/1/cards/${card.id}`, {idList: list.id}, (err) => {
-        if (err) {
-          return next(err);
-        }
+/**
+ * Upon certain pull request actions, this will move the card in the request into a
+ * specified list
+ *
+ * @param {Object} args - Arguments
+ * @param {Object} args.list - List to move the card to
+ * @param {string} args.card - Card
+ * @param {string} args.message - Message to add to the card on successful move
+ * @returns {function<string>} Result message
+ */
+function moveCard(args) {
+  return co.wrap(function* moveCard() {
+    // If it's already in the list, do not attempt to move it
+    if (args.card.idList === args.list.id) {
+      return `Skipped. ${args.card.name} is already in ${args.list.name}`;
+    }
 
-        const status = args.merged ? 'merged' : 'opened';
-        const message = `Pull request ${status} by ${args.githubUsername}`;
-        trello.post(`/1/cards/${card.id}/actions/comments?text=${message}`, (err) => {
-          return next(err, `Moved '${card.name}' into '${list.name}'`);
-        });
-      });
-    });
+    yield trelloPut(`/1/cards/${args.card.id}`, {idList: args.list.id});
+
+    try {
+      yield trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
+    } catch (ex) {
+      // Ignore this error - it's only the comment on the card that failed. Not the end of the world
+    }
+
+    return `Moved '${args.card.name}' into '${args.list.name}'`;
   });
 }
