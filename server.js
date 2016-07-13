@@ -7,7 +7,10 @@ const co = require('co');
 const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
+const request = require('request-promise');
 
+const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const trello = new Trello(devKey, appToken);
@@ -196,6 +199,13 @@ app.post('/pr', (req, res) => {
         });
       }
     }).catch((ex) => {
+      co(function* sendErrorToSlack() {
+        return yield notifySlack({
+          error: ex,
+          card: sourceBranch,
+        });
+      });
+
       return res.status(500).json({
         ok: false,
         err: ex,
@@ -253,18 +263,60 @@ function* getBoardAndList(args) {
  * @returns {function<string>} Result message
  */
 function* moveCard(args) {
-    // If it's already in the list, do not attempt to move it
-    if (args.card.idList === args.list.id) {
-      return `Skipped. ${args.card.name} is already in ${args.list.name}`;
-    }
+  // If it's already in the list, do not attempt to move it
+  if (args.card.idList === args.list.id) {
+    return `Skipped. ${args.card.name} is already in ${args.list.name}`;
+  }
 
-    yield trelloPut(`/1/cards/${args.card.id}`, {idList: args.list.id});
+  yield trelloPut(`/1/cards/${args.card.id}`, {idList: args.list.id});
 
-    try {
-      yield trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
-    } catch (ex) {
-      // Ignore this error - it's only the comment on the card that failed. Not the end of the world
-    }
+  try {
+    yield trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
+  } catch (ex) {
+    // Ignore this error - it's only the comment on the card that failed. Not the end of the world
+  }
 
-    return `Moved '${args.card.name}' into '${args.list.name}'`;
+  return `Moved '${args.card.name}' into '${args.list.name}'`;
+}
+
+/**
+ * Sends a notification to a Slack channel about an error
+ *
+ * @param args Arguments
+ * @param args.error Error returned from a request
+ * @param args.card Card ({board}-{card number}) that is being moved
+ */
+function* notifySlack(args) {
+  if (!slackWebhookUrl) {
+    return;
+  }
+
+  let text = `Unable to move \`${args.card}\``;
+  if (args.error) {
+    text += `\n\`\`\`\n${JSON.stringify(args.error, null, 2)}\n\`\`\``;
+  }
+
+  const payload = {
+    username: 'trello card events',
+    icon_emoji: ':bug:',
+    channel: slackChannel || '',
+    attachments: [{
+      fallback: text,
+      text,
+      mrkdwn_in: ['text'],
+      color: 'danger',
+    }],
+  };
+
+  const options = {
+    uri: slackWebhookUrl,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    form: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
+    timeout: 10000,
+  };
+
+  return request(options);
 }
