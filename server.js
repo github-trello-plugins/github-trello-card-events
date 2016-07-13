@@ -170,12 +170,12 @@ app.post('/pr', (req, res) => {
         destinationBranch,
       });
     });
+  } else {
+    return res.status(400).json({
+      ok: false,
+      err: 'Missing pull request body data',
+    });
   }
-
-  return res.status(400).json({
-    ok: false,
-    err: 'Missing pull request body data',
-  });
 });
 
 /**
