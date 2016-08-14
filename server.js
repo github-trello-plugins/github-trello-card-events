@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const Trello = require('node-trello');
 const request = require('request-promise');
 const GitHubApi = require('github');
+const moment = require('moment');
 
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
@@ -63,6 +64,28 @@ function trelloPut(...args) {
   });
 }
 
+function* githubClosePendingMilestone(repo) {
+  const openMilestones = yield githubGetMilestones(repo, 'open');
+  const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+  if (pendingMilestone) {
+    return new Promise((resolve, reject) => {
+      // Set title to current date/time, and set status to closed
+      github.issues.updateMilestone({
+        user: 'mpirik',
+        repo,
+        number: pendingMilestone.number,
+        title: `Deploy ${moment().format('YYYY-MM-DD hh:ssa')}`,
+        state: 'closed',
+      }, (err, milestone) => {
+        if (err) {
+          return reject(err);
+        }
+
+        return resolve(milestone);
+      });
+    });
+  }
+}
 function* githubAssignIssueToPendingMilestone(repo, prNumber) {
   const openMilestones = yield githubGetMilestones(repo, 'open');
   let pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
@@ -154,6 +177,10 @@ app.get('/deploy', (req, res) => {
   const boardName = req.param('board');
 
   co(function* deploy() {
+    // For now, we're only using milestones with platform
+    if (boardName === 'platform') {
+      yield githubClosePendingMilestone(boardName);
+    }
     const boardAndList = yield getBoardAndList({
       boardName,
       listName: listDestinationNameForMergedCards,
