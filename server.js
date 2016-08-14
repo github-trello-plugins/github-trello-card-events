@@ -8,12 +8,24 @@ const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
 const request = require('request-promise');
+const GitHubApi = require('github');
 
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const trello = new Trello(devKey, appToken);
+const github = new GitHubApi({
+  protocol: "https",
+  host: "api.github.com",
+  headers: {
+    "user-agent": "mpirik-Dashboard-App",
+  },
+});
+github.authenticate({
+  type: "oauth",
+  token: process.env.GITHUB_API_TOKEN,
+});
 
 function trelloGet(...args) {
   return new Promise((resolve, reject) => {
@@ -47,6 +59,61 @@ function trelloPut(...args) {
       }
 
       return resolve(...results);
+    });
+  });
+}
+
+function* githubAssignIssueToPendingMilestone(repo, prNumber) {
+  const openMilestones = yield githubGetMilestones(repo, 'open');
+  let pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+  if (!pendingMilestone) {
+    pendingMilestone = yield githubCreatePendingMilestone(repo);
+  }
+
+  return new Promise((resolve, reject) => {
+    github.issues.edit({
+      user: 'mpirik',
+      repo,
+      number: prNumber,
+      milestone: pendingMilestone.number,
+    }, (err, issue) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(issue);
+    });
+  });
+}
+
+function githubGetMilestones(repo, state) {
+  return new Promise((resolve, reject) => {
+    github.issues.getMilestones({
+      user: 'mpirik',
+      repo,
+      state: state || 'all',
+    }, (err, milestones) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(milestones);
+    });
+  });
+}
+
+function githubCreatePendingMilestone(repo) {
+  return new Promise((resolve, reject) => {
+    github.issues.createMilestone({
+      user: 'mpirik',
+      repo,
+      title: 'Deploy Pending',
+    }, (err, milestone) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(milestone);
     });
   });
 }
@@ -166,6 +233,10 @@ app.post('/pr', (req, res) => {
             } else {
               listName = listDestinationNameForMergedCards;
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
+              // At this time, I don't know if we want to use milestones for other any repos besides platform - jmw, 8/14/16
+              if (boardName === 'platform') {
+                yield githubAssignIssueToPendingMilestone(boardName, req.body.number);
+              }
             }
 
             const boardAndList = yield getBoardAndList({
