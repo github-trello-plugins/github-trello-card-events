@@ -185,7 +185,13 @@ app.get('/deploy', (req, res) => {
   co(function* deploy() {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
     if (reposUsingMilestones.includes(boardName)) {
-      yield githubClosePendingMilestone(boardName);
+      try {
+        yield githubClosePendingMilestone(boardName);
+      } catch (ex) {
+        yield notifySlack({
+          error: ex,
+        });
+      }
     }
     const boardAndList = yield getBoardAndList({
       boardName,
@@ -396,19 +402,26 @@ function* moveCard(args) {
 /**
  * Sends a notification to a Slack channel about an error
  *
- * @param args Arguments
- * @param args.error Error returned from a request
- * @param args.card Card ({board}-{card number}) that is being moved
+ * @param {Object} args Arguments
+ * @param {Error} args.error - Error returned from a request
+ * @param {string} [args.card] - Card ({board}-{card number}) that is being moved
  */
 function* notifySlack(args) {
   if (!slackWebhookUrl) {
     return;
   }
 
-  let text = `Unable to move \`${args.card}\``;
-  if (args.error) {
-    text += `\n\`\`\`\n${JSON.stringify(args.error, null, 2)}\n\`\`\``;
+  let text = ':poop:';
+  if (args.card) {
+    text = `Unable to move \`${args.card}\``;
   }
+
+  const simpleError = {
+    message: args.error.message,
+    stack: args.error.stack,
+  };
+
+  text += `\n\`\`\`\n${JSON.stringify(simpleError, null, 2)}\n\`\`\``;
 
   const payload = {
     username: 'trello card events',
@@ -432,5 +445,7 @@ function* notifySlack(args) {
     timeout: 10000,
   };
 
-  return request(options);
+  return request(options).catch(ex => {
+    // Would be good to log this, but we'll just ignore for now
+  });
 }
