@@ -8,12 +8,27 @@ const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
 const request = require('request-promise');
+const GitHubApi = require('github');
+const moment = require('moment');
 
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
+const user = process.env.GITHUB_USER;
+const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const trello = new Trello(devKey, appToken);
+const github = new GitHubApi({
+  protocol: "https",
+  host: "api.github.com",
+  headers: {
+    "user-agent": process.env.GITHUB_USER_AGENT,
+  },
+});
+github.authenticate({
+  type: "oauth",
+  token: process.env.GITHUB_API_TOKEN,
+});
 
 function trelloGet(...args) {
   return new Promise((resolve, reject) => {
@@ -47,6 +62,83 @@ function trelloPut(...args) {
       }
 
       return resolve(...results);
+    });
+  });
+}
+
+function* githubClosePendingMilestone(repo) {
+  const openMilestones = yield githubGetMilestones(repo, 'open');
+  const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+  if (pendingMilestone) {
+    return new Promise((resolve, reject) => {
+      // Set title to current date/time, and set status to closed
+      github.issues.updateMilestone({
+        user,
+        repo,
+        number: pendingMilestone.number,
+        title: `Deploy ${moment().format('YYYY-MM-DD hh:ssa')}`,
+        state: 'closed',
+      }, (err, milestone) => {
+        if (err) {
+          return reject(err);
+        }
+
+        return resolve(milestone);
+      });
+    });
+  }
+}
+function* githubAssignIssueToPendingMilestone(repo, prNumber) {
+  const openMilestones = yield githubGetMilestones(repo, 'open');
+  let pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+  if (!pendingMilestone) {
+    pendingMilestone = yield githubCreatePendingMilestone(repo);
+  }
+
+  return new Promise((resolve, reject) => {
+    github.issues.edit({
+      user,
+      repo,
+      number: prNumber,
+      milestone: pendingMilestone.number,
+    }, (err, issue) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(issue);
+    });
+  });
+}
+
+function githubGetMilestones(repo, state) {
+  return new Promise((resolve, reject) => {
+    github.issues.getMilestones({
+      user,
+      repo,
+      state: state || 'all',
+    }, (err, milestones) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(milestones);
+    });
+  });
+}
+
+function githubCreatePendingMilestone(repo) {
+  return new Promise((resolve, reject) => {
+    github.issues.createMilestone({
+      user,
+      repo,
+      title: 'Deploy Pending',
+    }, (err, milestone) => {
+      if (err) {
+        reject(err);
+      }
+
+      return resolve(milestone);
     });
   });
 }
@@ -87,6 +179,10 @@ app.get('/deploy', (req, res) => {
   const boardName = req.param('board');
 
   co(function* deploy() {
+    // Not all repos will be using milestones to track deployments, so only set them up when needed
+    if (reposUsingMilestones.includes(boardName)) {
+      yield githubClosePendingMilestone(boardName);
+    }
     const boardAndList = yield getBoardAndList({
       boardName,
       listName: listDestinationNameForMergedCards,
@@ -166,6 +262,11 @@ app.post('/pr', (req, res) => {
             } else {
               listName = listDestinationNameForMergedCards;
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
+
+              // Not all repos will be using milestones to track deployments, so only set them up when needed
+              if (reposUsingMilestones.includes(boardName)) {
+                yield githubAssignIssueToPendingMilestone(boardName, req.body.number);
+              }
             }
 
             const boardAndList = yield getBoardAndList({
