@@ -15,12 +15,14 @@ const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
+const user = process.env.GITHUB_USER;
+const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const trello = new Trello(devKey, appToken);
 const github = new GitHubApi({
   protocol: "https",
   host: "api.github.com",
   headers: {
-    "user-agent": "mpirik-Dashboard-App",
+    "user-agent": process.env.GITHUB_USER_AGENT,
   },
 });
 github.authenticate({
@@ -71,7 +73,7 @@ function* githubClosePendingMilestone(repo) {
     return new Promise((resolve, reject) => {
       // Set title to current date/time, and set status to closed
       github.issues.updateMilestone({
-        user: 'mpirik',
+        user,
         repo,
         number: pendingMilestone.number,
         title: `Deploy ${moment().format('YYYY-MM-DD hh:ssa')}`,
@@ -95,7 +97,7 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
 
   return new Promise((resolve, reject) => {
     github.issues.edit({
-      user: 'mpirik',
+      user,
       repo,
       number: prNumber,
       milestone: pendingMilestone.number,
@@ -112,7 +114,7 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
 function githubGetMilestones(repo, state) {
   return new Promise((resolve, reject) => {
     github.issues.getMilestones({
-      user: 'mpirik',
+      user,
       repo,
       state: state || 'all',
     }, (err, milestones) => {
@@ -128,7 +130,7 @@ function githubGetMilestones(repo, state) {
 function githubCreatePendingMilestone(repo) {
   return new Promise((resolve, reject) => {
     github.issues.createMilestone({
-      user: 'mpirik',
+      user,
       repo,
       title: 'Deploy Pending',
     }, (err, milestone) => {
@@ -177,8 +179,8 @@ app.get('/deploy', (req, res) => {
   const boardName = req.param('board');
 
   co(function* deploy() {
-    // For now, we're only using milestones with platform
-    if (boardName === 'platform') {
+    // Not all repos will be using milestones to track deployments, so only set them up when needed
+    if (reposUsingMilestones.includes(boardName)) {
       yield githubClosePendingMilestone(boardName);
     }
     const boardAndList = yield getBoardAndList({
@@ -260,8 +262,9 @@ app.post('/pr', (req, res) => {
             } else {
               listName = listDestinationNameForMergedCards;
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
-              // At this time, I don't know if we want to use milestones for other any repos besides platform - jmw, 8/14/16
-              if (boardName === 'platform') {
+
+              // Not all repos will be using milestones to track deployments, so only set them up when needed
+              if (reposUsingMilestones.includes(boardName)) {
                 yield githubAssignIssueToPendingMilestone(boardName, req.body.number);
               }
             }
