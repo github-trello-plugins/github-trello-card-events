@@ -88,6 +88,7 @@ function* githubClosePendingMilestone(repo) {
     });
   }
 }
+
 function* githubAssignIssueToPendingMilestone(repo, prNumber) {
   const openMilestones = yield githubGetMilestones(repo, 'open');
   let pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
@@ -164,7 +165,10 @@ app.get('/healthcheck', (req, res) => {
     if (err) {
       return res.status(500).json({
         ok: false,
-        err,
+        err: {
+          message: err.message,
+          stack: err.stack,
+        },
       });
     }
 
@@ -214,7 +218,10 @@ app.get('/deploy', (req, res) => {
   }).catch((ex) => {
     return res.status(500).json({
       ok: false,
-      err: ex,
+      err: {
+        message: ex.message,
+        stack: ex.stack,
+      },
       boardName,
       listName: listDestinationNameForDeployments,
     });
@@ -309,7 +316,10 @@ app.post('/pr', (req, res) => {
 
       return res.status(500).json({
         ok: false,
-        err: ex,
+        err: {
+          message: ex.message,
+          stack: ex.stack,
+        },
         sourceBranch,
         destinationBranch,
       });
@@ -317,7 +327,10 @@ app.post('/pr', (req, res) => {
   } else {
     return res.status(400).json({
       ok: false,
-      err: new Error('Missing pull request body data'),
+      err: {
+        message: 'Missing pull request body data',
+        stack: new Error().stack,
+      },
     });
   }
 });
