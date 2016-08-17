@@ -17,6 +17,7 @@ const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const user = process.env.GITHUB_USER;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
+const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
 const github = new GitHubApi({
   protocol: "https",
@@ -70,7 +71,7 @@ function* githubClosePendingMilestone(repo) {
   const openMilestones = yield githubGetMilestones(repo, 'open');
   const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
   if (pendingMilestone) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // Set title to current date/time, and set status to closed
       github.issues.updateMilestone({
         user,
@@ -80,7 +81,10 @@ function* githubClosePendingMilestone(repo) {
         state: 'closed',
       }, (err, milestone) => {
         if (err) {
-          return reject(err);
+        // Just notify and continue
+        notifySlack({
+          error: err,
+        });
         }
 
         return resolve(milestone);
@@ -96,7 +100,7 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
     pendingMilestone = yield githubCreatePendingMilestone(repo);
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     github.issues.edit({
       user,
       repo,
@@ -104,7 +108,10 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
       milestone: pendingMilestone.number,
     }, (err, issue) => {
       if (err) {
-        reject(err);
+        // Just notify and continue
+        notifySlack({
+          error: err,
+        });
       }
 
       return resolve(issue);
@@ -113,14 +120,17 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
 }
 
 function githubGetMilestones(repo, state) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     github.issues.getMilestones({
       user,
       repo,
       state: state || 'all',
     }, (err, milestones) => {
       if (err) {
-        reject(err);
+        // Just notify and continue
+        notifySlack({
+          error: err,
+        });
       }
 
       return resolve(milestones);
@@ -129,17 +139,56 @@ function githubGetMilestones(repo, state) {
 }
 
 function githubCreatePendingMilestone(repo) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     github.issues.createMilestone({
       user,
       repo,
       title: 'Deploy Pending',
     }, (err, milestone) => {
       if (err) {
-        reject(err);
+        // Just notify and continue
+        notifySlack({
+          error: err,
+        });
       }
 
       return resolve(milestone);
+    });
+  });
+}
+
+function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
+  return new Promise((resolve) => {
+    let body = issue.body || '';
+    if (body) {
+      body += '\n';
+    }
+    if (!body.includes(trelloCard.shortUrl)) {
+      body += trelloCard.shortUrl;
+    }
+
+    // Get labels applied to Trello card and filter them down to the ones we care about in Github
+    const labels = trelloCard.labels.map((trelloLabel) => {
+      return trelloLabel.name.toLowerCase();
+    }).filter((trelloLabelName) => {
+      return labelsToCopy.includes(trelloLabelName);
+    });
+
+    github.issues.edit({
+      user,
+      repo,
+      number: issue.number,
+      body,
+      labels,
+    }, (err, issue) => {
+      if (err) {
+        // Just notify and continue
+        notifySlack({
+          error: err,
+        });
+      }
+
+      return resolve(issue);
     });
   });
 }
@@ -288,6 +337,11 @@ app.post('/pr', (req, res) => {
             });
 
             const card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+
+            if (card) {
+              // Update labels and add link to Trello card in the pull request
+              yield githubUpdateIssueFromTrelloCard(boardName, pullRequest, card);
+            }
 
             const moveCardResult = yield moveCard({
               list: boardAndList.list,
@@ -445,7 +499,7 @@ function* notifySlack(args) {
     timeout: 10000,
   };
 
-  return request(options).catch(ex => {
+  return request(options).catch(() => {
     // Would be good to log this, but we'll just ignore for now
   });
 }
