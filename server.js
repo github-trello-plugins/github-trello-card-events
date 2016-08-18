@@ -195,7 +195,7 @@ function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
 
 const listDestinationNameForOpenedCards = process.env.PR_OPEN_DEST_LIST || 'Review';
 const listDestinationNameForMergedCards = process.env.PR_MERGE_DEST_LIST || 'Deploy';
-const listDestinationNameForDoingCards = process.env.PR_MERGE_DEST_LIST || 'Doing';
+const listDestinationNameForDoingCards = process.env.PR_CLOSE_DEST_LIST || 'Doing';
 const listDestinationNameForDeployments = process.env.DEPLOY_DEST_LIST || 'Validate';
 let sourceBranch;
 let destinationBranch;
