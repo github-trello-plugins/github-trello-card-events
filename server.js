@@ -322,6 +322,9 @@ app.post('/pr', (req, res) => {
             if (action === 'opened' || action === 'reopened') {
               listName = listDestinationNameForOpenedCards;
               message = `Pull request opened by ${pullRequest.user.login}`;
+              if (pullRequest.html_url) {
+                message += ' - ' + pullRequest.html_url;
+              }
             } else if (action === 'closed' && !pullRequest.merged_at) {
               listName = listDestinationNameForDoingCards;
               message = 'Pull request closed';
