@@ -195,6 +195,7 @@ function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
 
 const listDestinationNameForOpenedCards = process.env.PR_OPEN_DEST_LIST || 'Review';
 const listDestinationNameForMergedCards = process.env.PR_MERGE_DEST_LIST || 'Deploy';
+const listDestinationNameForDoingCards = process.env.PR_MERGE_DEST_LIST || 'Doing';
 const listDestinationNameForDeployments = process.env.DEPLOY_DEST_LIST || 'Validate';
 let sourceBranch;
 let destinationBranch;
@@ -321,6 +322,12 @@ app.post('/pr', (req, res) => {
             if (action === 'opened' || action === 'reopened') {
               listName = listDestinationNameForOpenedCards;
               message = `Pull request opened by ${pullRequest.user.login}`;
+            } else if (action === 'closed' && !pullRequest.merged_at) {
+              listName = listDestinationNameForDoingCards;
+              message = 'Pull request closed';
+              if (req.body.sender && req.body.sender.login) {
+                message += ` by ${req.body.sender.login}`;
+              }
             } else {
               listName = listDestinationNameForMergedCards;
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
@@ -340,7 +347,14 @@ app.post('/pr', (req, res) => {
 
             if (card) {
               // Update labels and add link to Trello card in the pull request
-              yield githubUpdateIssueFromTrelloCard(boardName, pullRequest, card);
+              try {
+                yield githubUpdateIssueFromTrelloCard(boardName, pullRequest, card);
+              } catch (ex) {
+                yield notifySlack({
+                  error: ex,
+                  card: sourceBranch,
+                });
+              }
             }
 
             const moveCardResult = yield moveCard({
