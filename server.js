@@ -160,10 +160,11 @@ function githubCreatePendingMilestone(repo) {
 function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
   return new Promise((resolve) => {
     let body = issue.body || '';
-    if (body) {
-      body += '\n';
-    }
     if (!body.includes(trelloCard.shortUrl)) {
+      if (body) {
+        body += '\n\n';
+      }
+
       body += trelloCard.shortUrl;
     }
 
@@ -451,7 +452,7 @@ function* getBoardAndList(args) {
  * @param {Object} args.list - List to move the card to
  * @param {string} args.card - Card
  * @param {string} args.message - Message to add to the card on successful move
- * @returns {function<string>} Result message
+ * @returns {string} Result message
  */
 function* moveCard(args) {
   // If it's already in the list, do not attempt to move it
