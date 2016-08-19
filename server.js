@@ -9,7 +9,7 @@ const bodyParser = require('body-parser');
 const Trello = require('node-trello');
 const request = require('request-promise');
 const GitHubApi = require('github');
-const moment = require('moment');
+const moment = require('moment-timezone');
 
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
@@ -77,8 +77,9 @@ function* githubClosePendingMilestone(repo) {
         user,
         repo,
         number: pendingMilestone.number,
-        title: `Deploy ${moment().format('YYYY-MM-DD hh:ssa')}`,
+        title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:ssa')}`,
         state: 'closed',
+        due_on: new Date(),
       }, (err, milestone) => {
         if (err) {
         // Just notify and continue
@@ -324,7 +325,7 @@ app.post('/pr', (req, res) => {
               listName = listDestinationNameForOpenedCards;
               message = `Pull request opened by ${pullRequest.user.login}`;
               if (pullRequest.html_url) {
-                message += ' - ' + pullRequest.html_url;
+                message += ` - ${pullRequest.html_url}`;
               }
             } else if (action === 'closed' && !pullRequest.merged_at) {
               listName = listDestinationNameForDoingCards;
