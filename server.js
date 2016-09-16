@@ -16,6 +16,9 @@ const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const user = process.env.GITHUB_USER;
+const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
+const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
+const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
@@ -255,6 +258,28 @@ app.get('/deploy', (req, res) => {
 
     if (!destinationList) {
       throw new Error(`Unable to find list (${listDestinationNameForDeployments}) in board: ${boardName}`);
+    }
+
+    if (deployWebhookUrl) {
+      const webhookRequestParams = {
+        uri: deployWebhookUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 5000,
+      };
+
+      if (deployWebhookUsername) {
+        webhookRequestParams.auth = {
+          user: deployWebhookUsername,
+          pass: deployWebhookPassword,
+        };
+      }
+
+      yield request.post(webhookRequestParams).catch(() => {
+        // TODO: Maybe log this in the future
+      });
     }
 
     const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name`);
