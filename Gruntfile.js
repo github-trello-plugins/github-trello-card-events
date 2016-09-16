@@ -1,4 +1,6 @@
-module.exports = function(grunt) {
+'use strict';
+
+module.exports = (grunt) => {
 
   // Project configuration.
   grunt.initConfig({
@@ -8,15 +10,28 @@ module.exports = function(grunt) {
         files: [{
           expand: true,
           cwd: './',
-          src: ['server.js']
+          src: ['server.js'],
         }],
         options: {
           cache: true,
           fix: true,
         },
-      }
-    }
+      },
+    },
+    jsbeautifier: {
+      dist: {
+        files: [{
+          expand: true,
+          cwd: './',
+          src: ['server.js'],
+        }],
+        options: {
+          config: '.jsbeautifyrc',
+        },
+      },
+    },
   });
 
   grunt.loadNpmTasks('grunt-eslint');
+  grunt.loadNpmTasks('grunt-jsbeautifier');
 };

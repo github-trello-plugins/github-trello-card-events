@@ -5,5 +5,8 @@
 # Add node to the path since Tower runs in a different environment
 export PATH=/usr/local/bin:$PATH
 
+# Beautify code before committing
+grunt jsbeautifier
+
 # ESLint stuff before committing
 grunt eslint

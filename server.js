@@ -82,10 +82,10 @@ function* githubClosePendingMilestone(repo) {
         due_on: new Date(),
       }, (err, milestone) => {
         if (err) {
-        // Just notify and continue
-        notifySlack({
-          error: err,
-        });
+          // Just notify and continue
+          notifySlack({
+            error: err,
+          });
         }
 
         return resolve(milestone);
@@ -461,7 +461,9 @@ function* moveCard(args) {
     return `Skipped. ${args.card.name} is already in ${args.list.name}`;
   }
 
-  yield trelloPut(`/1/cards/${args.card.id}`, {idList: args.list.id});
+  yield trelloPut(`/1/cards/${args.card.id}`, {
+    idList: args.list.id,
+  });
 
   try {
     yield trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
