@@ -294,12 +294,12 @@ app.get('/deploy', (req, res) => {
       });
     }
 
-    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name`);
+    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name,idList`);
 
     // Notify slack of deployment, with summary of cards being deployed
     let slackUpdateText = deploySlackMessage;
     for (const card of cards) {
-      slackUpdateText += `\n+ ${card.name}`;
+      slackUpdateText += `\n+ ${card.name || JSON.stringify(card)}`;
     }
     yield notifySlack({
       slackWebhookUrl,
@@ -500,7 +500,10 @@ function* getBoardAndList(args) {
  *
  * @param {Object} args - Arguments
  * @param {Object} args.list - List to move the card to
- * @param {string} args.card - Card
+ * @param {Object} args.card - Card
+ * @param {string} args.card.id - Id of the card
+ * @param {string} args.card.idList - Id of the card's list
+ * @param {string} args.card.name - Name of the card
  * @param {string} args.message - Message to add to the card on successful move
  * @returns {string} Result message
  */
