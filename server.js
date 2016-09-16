@@ -19,6 +19,8 @@ const user = process.env.GITHUB_USER;
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
+const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || 'Deployed updates:';
+const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
@@ -86,8 +88,10 @@ function* githubClosePendingMilestone(repo) {
       }, (err, milestone) => {
         if (err) {
           // Just notify and continue
-          notifySlack({
-            error: err,
+          co(function* sendErrorToSlack() {
+            yield notifySlackOfCardError({
+              error: err,
+            });
           });
         }
 
@@ -113,8 +117,10 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
     }, (err, issue) => {
       if (err) {
         // Just notify and continue
-        notifySlack({
-          error: err,
+        co(function* sendErrorToSlack() {
+          yield notifySlackOfCardError({
+            error: err,
+          });
         });
       }
 
@@ -132,8 +138,10 @@ function githubGetMilestones(repo, state) {
     }, (err, milestones) => {
       if (err) {
         // Just notify and continue
-        notifySlack({
-          error: err,
+        co(function* sendErrorToSlack() {
+          yield notifySlackOfCardError({
+            error: err,
+          });
         });
       }
 
@@ -151,8 +159,10 @@ function githubCreatePendingMilestone(repo) {
     }, (err, milestone) => {
       if (err) {
         // Just notify and continue
-        notifySlack({
-          error: err,
+        co(function* sendErrorToSlack() {
+          yield notifySlackOfCardError({
+            error: err,
+          });
         });
       }
 
@@ -188,8 +198,10 @@ function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
     }, (err, issue) => {
       if (err) {
         // Just notify and continue
-        notifySlack({
-          error: err,
+        co(function* sendErrorToSlack() {
+          yield notifySlackOfCardError({
+            error: err,
+          });
         });
       }
 
@@ -243,7 +255,7 @@ app.get('/deploy', (req, res) => {
       try {
         yield githubClosePendingMilestone(boardName);
       } catch (ex) {
-        yield notifySlack({
+        yield notifySlackOfCardError({
           error: ex,
         });
       }
@@ -283,6 +295,18 @@ app.get('/deploy', (req, res) => {
     }
 
     const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name`);
+
+    // Notify slack of deployment, with summary of cards being deployed
+    let slackUpdateText = deploySlackMessage;
+    for (const card of cards) {
+      slackUpdateText += `\n+ ${card.name}`;
+    }
+    yield notifySlack({
+      slackWebhookUrl,
+      text: slackUpdateText,
+      channel: deploySlackChannel,
+      emoji: ':heart:',
+    });
 
     for (const card of cards) {
       yield moveCard({
@@ -380,7 +404,7 @@ app.post('/pr', (req, res) => {
               try {
                 yield githubUpdateIssueFromTrelloCard(boardName, pullRequest, card);
               } catch (ex) {
-                yield notifySlack({
+                yield notifySlackOfCardError({
                   error: ex,
                   card: sourceBranch,
                 });
@@ -412,7 +436,7 @@ app.post('/pr', (req, res) => {
       }
     }).catch((ex) => {
       co(function* sendErrorToSlack() {
-        return yield notifySlack({
+        return yield notifySlackOfCardError({
           error: ex,
           card: sourceBranch,
         });
@@ -506,7 +530,7 @@ function* moveCard(args) {
  * @param {Error} args.error - Error returned from a request
  * @param {string} [args.card] - Card ({board}-{card number}) that is being moved
  */
-function* notifySlack(args) {
+function notifySlackOfCardError(args) {
   if (!slackWebhookUrl) {
     return;
   }
@@ -523,15 +547,35 @@ function* notifySlack(args) {
 
   text += `\n\`\`\`\n${JSON.stringify(simpleError, null, 2)}\n\`\`\``;
 
+  return notifySlack({
+    slackWebhookUrl,
+    text,
+    borderColor: 'danger',
+    emoji: ':bug:',
+    channel: slackChannel,
+  });
+}
+
+/**
+ * Sends message to slack channel
+ * @param {Object} args
+ * @param {string} args.slackWebhookUrl
+ * @param {string} args.text - Message text
+ * @param {string} [args.borderColor] - Color of the border along the left side of the message. Can either be one of good, warning, danger, or any hex color code (eg. #439FE0)
+ * @param {string} [args.channel] - Slack channel to post message. If omitted, the message will be posted in the channel configured with the webhook
+ * @param {string} [args.emoji] - Slack emoji icon for the message
+ * @returns {Promise} Request promise
+ */
+function notifySlack(args) {
   const payload = {
     username: 'trello card events',
-    icon_emoji: ':bug:',
-    channel: slackChannel || '',
+    icon_emoji: args.emoji,
+    channel: args.channel || '',
     attachments: [{
-      fallback: text,
-      text,
+      fallback: args.text,
+      text: args.text,
       mrkdwn_in: ['text'],
-      color: 'danger',
+      color: args.borderColor,
     }],
   };
 
@@ -546,6 +590,6 @@ function* notifySlack(args) {
   };
 
   return request(options).catch(() => {
-    // Would be good to log this, but we'll just ignore for now
+    // TODO: Maybe log this in the future
   });
 }
