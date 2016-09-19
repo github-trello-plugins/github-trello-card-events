@@ -21,6 +21,7 @@ const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
 const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || 'Deployed updates:';
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
+const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
@@ -306,6 +307,7 @@ app.get('/deploy', (req, res) => {
       text: slackUpdateText,
       channel: deploySlackChannel,
       emoji: ':heart:',
+      username: deploySlackUsername,
     });
 
     for (const card of cards) {
@@ -567,11 +569,12 @@ function notifySlackOfCardError(args) {
  * @param {string} [args.borderColor] - Color of the border along the left side of the message. Can either be one of good, warning, danger, or any hex color code (eg. #439FE0)
  * @param {string} [args.channel] - Slack channel to post message. If omitted, the message will be posted in the channel configured with the webhook
  * @param {string} [args.emoji] - Slack emoji icon for the message
+ * @param {string} [args.username] - Slack username to show with message
  * @returns {Promise} Request promise
  */
 function notifySlack(args) {
   const payload = {
-    username: 'trello card events',
+    username: args.username || 'trello card events',
     icon_emoji: args.emoji,
     channel: args.channel || '',
     attachments: [{
