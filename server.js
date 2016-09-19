@@ -547,7 +547,7 @@ function notifySlackOfCardError(args) {
 
   const simpleError = {
     message: args.error.message,
-    stack: args.error.stack,
+    stack: args.error.stack || new Error().stack,
   };
 
   text += `\n\`\`\`\n${JSON.stringify(simpleError, null, 2)}\n\`\`\``;
