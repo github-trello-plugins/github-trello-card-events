@@ -22,6 +22,8 @@ const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
 const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || 'Deployed updates:';
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
+const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
+const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '').split(',').map((label) => label.toLowerCase());
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
@@ -295,13 +297,25 @@ app.get('/deploy', (req, res) => {
       });
     }
 
-    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name,idList`);
+    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name,idList,labels`);
 
     // Notify slack of deployment, with summary of cards being deployed
     let slackUpdateText = deploySlackMessage;
+    const labelsToNotify = [];
     for (const card of cards) {
       slackUpdateText += `\n+ ${card.name || JSON.stringify(card)}`;
+
+      for (const label of card.labels) {
+        if (deploySlackNotifyLabels.includes(label.name.toLowerCase()) && !labelsToNotify.includes(label.name)) {
+          labelsToNotify.push(label.name);
+        }
+      }
     }
+
+    if (labelsToNotify.length) {
+      slackUpdateText += `\n***** ${deploySlackNotifyUser}: ${labelsToNotify.join(', ')}`;
+    }
+
     yield notifySlack({
       slackWebhookUrl,
       text: slackUpdateText,
