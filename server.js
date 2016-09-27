@@ -19,7 +19,7 @@ const user = process.env.GITHUB_USER;
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
-const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || 'Deployed updates:';
+const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || '*Deployed updates:*';
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
@@ -313,12 +313,13 @@ app.get('/deploy', (req, res) => {
     }
 
     if (labelsToNotify.length) {
-      slackUpdateText += `\n***** ${deploySlackNotifyUser}: ${labelsToNotify.join(', ')}`;
+      slackUpdateText += `\n------------------\n${deploySlackNotifyUser}: ${labelsToNotify.join(', ')}`;
     }
 
     yield notifySlack({
       slackWebhookUrl,
       text: slackUpdateText,
+      sendAsText: true,
       channel: deploySlackChannel,
       emoji: ':heart:',
       username: deploySlackUsername,
@@ -580,6 +581,7 @@ function notifySlackOfCardError(args) {
  * @param {Object} args
  * @param {string} args.slackWebhookUrl
  * @param {string} args.text - Message text
+ * @param {boolean} [args.sendAsText] - If true, send the message as regular text; otherwise send the message as an attachment
  * @param {string} [args.borderColor] - Color of the border along the left side of the message. Can either be one of good, warning, danger, or any hex color code (eg. #439FE0)
  * @param {string} [args.channel] - Slack channel to post message. If omitted, the message will be posted in the channel configured with the webhook
  * @param {string} [args.emoji] - Slack emoji icon for the message
@@ -591,13 +593,18 @@ function notifySlack(args) {
     username: args.username || 'trello card events',
     icon_emoji: args.emoji,
     channel: args.channel || '',
-    attachments: [{
+  };
+
+  if (args.sendAsText) {
+    payload.text = args.text;
+  } else {
+    payload.attachments = [{
       fallback: args.text,
       text: args.text,
       mrkdwn_in: ['text'],
       color: args.borderColor,
-    }],
-  };
+    }];
+  }
 
   const options = {
     uri: slackWebhookUrl,
