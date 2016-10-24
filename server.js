@@ -321,7 +321,7 @@ app.get('/deploy', (req, res) => {
           user: libratoUsername,
           pass: libratoToken,
         },
-        title: 'Deployment',
+        title: `Deployment: ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
         description: slackUpdateText,
         timeout: 5000,
       }).catch((ex) => {
