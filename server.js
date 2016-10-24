@@ -24,6 +24,9 @@ const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
 const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '').split(',').map((label) => label.toLowerCase());
+const libratoAnnotationUrl = process.env.LIBRATO_ANNOTATION_URL;
+const libratoUsername = process.env.LIBRATO_USERNAME;
+const libratoToken = process.env.LIBRATO_TOKEN;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
@@ -305,6 +308,29 @@ app.get('/deploy', (req, res) => {
           labelsToNotify.push(label.name);
         }
       }
+    }
+
+    if (libratoAnnotationUrl && libratoUsername && libratoToken) {
+      yield request.post({
+        uri: libratoAnnotationUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        auth: {
+          user: libratoUsername,
+          pass: libratoToken,
+        },
+        title: 'Deployment',
+        description: slackUpdateText,
+        timeout: 5000,
+      }).catch((ex) => {
+        co(function* sendErrorToSlack() {
+          yield notifySlackOfCardError({
+            error: ex,
+          });
+        });
+      });
     }
 
     if (labelsToNotify.length) {
