@@ -79,23 +79,18 @@ function* githubClosePendingMilestone(repo) {
   const openMilestones = yield githubGetMilestones(repo, 'open');
   const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
   if (pendingMilestone) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // Set title to current date/time, and set status to closed
       github.issues.updateMilestone({
         user,
         repo,
         number: pendingMilestone.number,
-        title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:ssa')}`,
+        title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
         state: 'closed',
         due_on: new Date(),
       }, (err, milestone) => {
         if (err) {
-          // Just notify and continue
-          co(function* sendErrorToSlack() {
-            yield notifySlackOfCardError({
-              error: err,
-            });
-          });
+          return reject(err);
         }
 
         return resolve(milestone);
