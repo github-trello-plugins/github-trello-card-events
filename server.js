@@ -314,15 +314,14 @@ app.get('/deploy', (req, res) => {
       yield request.post({
         uri: libratoAnnotationUrl,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         auth: {
           user: libratoUsername,
           pass: libratoToken,
         },
-        title: `Deployment: ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
-        description: slackUpdateText,
+        json: {
+          title: 'Deployment',
+          description: slackUpdateText,
+        },
         timeout: 5000,
       }).catch((ex) => {
         co(function* sendErrorToSlack() {
