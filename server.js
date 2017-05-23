@@ -78,139 +78,6 @@ function trelloPut(...args) {
   });
 }
 
-function* githubClosePendingMilestone(repo) {
-  const openMilestones = yield githubGetMilestones(repo, 'open');
-  const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
-  if (pendingMilestone) {
-    return new Promise((resolve, reject) => {
-      // Set title to current date/time, and set status to closed
-      github.issues.updateMilestone({
-        owner: githubOwner,
-        repo,
-        number: pendingMilestone.number,
-        title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
-        state: 'closed',
-        due_on: new Date(),
-      }, (err, milestone) => {
-        if (err) {
-          return reject(err);
-        }
-
-        return resolve(milestone);
-      });
-    });
-  }
-}
-
-function* githubAssignIssueToPendingMilestone(repo, prNumber) {
-  const openMilestones = yield githubGetMilestones(repo, 'open');
-  let pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
-  if (!pendingMilestone) {
-    pendingMilestone = yield githubCreatePendingMilestone(repo);
-  }
-
-  return new Promise((resolve) => {
-    github.issues.edit({
-      owner: githubOwner,
-      repo,
-      number: prNumber,
-      milestone: pendingMilestone.number,
-    }, (err, issue) => {
-      if (err) {
-        // Just notify and continue
-        co(function* sendErrorToSlack() {
-          yield notifySlackOfCardError({
-            error: err,
-          });
-        });
-      }
-
-      return resolve(issue);
-    });
-  });
-}
-
-function githubGetMilestones(repo, state) {
-  return new Promise((resolve) => {
-    github.issues.getMilestones({
-      owner: githubOwner,
-      repo,
-      state: state || 'all',
-    }, (err, milestones) => {
-      if (err) {
-        // Just notify and continue
-        co(function* sendErrorToSlack() {
-          yield notifySlackOfCardError({
-            error: err,
-          });
-        });
-      }
-
-      return resolve(milestones);
-    });
-  });
-}
-
-function githubCreatePendingMilestone(repo) {
-  return new Promise((resolve) => {
-    github.issues.createMilestone({
-      owner: githubOwner,
-      repo,
-      title: 'Deploy Pending',
-    }, (err, milestone) => {
-      if (err) {
-        // Just notify and continue
-        co(function* sendErrorToSlack() {
-          yield notifySlackOfCardError({
-            error: err,
-          });
-        });
-      }
-
-      return resolve(milestone);
-    });
-  });
-}
-
-function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
-  return new Promise((resolve) => {
-    let body = issue.body || '';
-    if (!body.includes(trelloCard.shortUrl)) {
-      if (body) {
-        body += '\n\n';
-      }
-
-      body += trelloCard.shortUrl;
-    }
-
-    // Get labels applied to Trello card and filter them down to the ones we care about in Github
-    const labels = trelloCard.labels.map((trelloLabel) => {
-      return trelloLabel.name.toLowerCase();
-    }).filter((trelloLabelName) => {
-      return labelsToCopy.includes(trelloLabelName);
-    });
-
-    github.issues.edit({
-      owner: githubOwner,
-      repo,
-      number: issue.number,
-      body,
-      labels,
-    }, (err, issue) => {
-      if (err) {
-        // Just notify and continue
-        co(function* sendErrorToSlack() {
-          yield notifySlackOfCardError({
-            error: err,
-          });
-        });
-      }
-
-      return resolve(issue);
-    });
-  });
-}
-
 const listDestinationNameForOpenedCards = process.env.PR_OPEN_DEST_LIST || 'Review';
 const listDestinationNameForMergedCards = process.env.PR_MERGE_DEST_LIST || 'Deploy';
 const listDestinationNameForDoingCards = process.env.PR_CLOSE_DEST_LIST || 'Doing';
@@ -254,7 +121,22 @@ app.get('/deploy', (req, res) => {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
     if (reposUsingMilestones.includes(boardName)) {
       try {
-        yield githubClosePendingMilestone(boardName);
+        const openMilestones = yield github.issues.getMilestones({
+          owner: githubOwner,
+          repo: boardName,
+          state: 'open',
+        });
+        const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+        if (pendingMilestone) {
+          yield github.issues.updateMilestone({
+            owner: githubOwner,
+            repo: boardName,
+            number: pendingMilestone.number,
+            title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
+            state: 'closed',
+            due_on: new Date(),
+          });
+        }
       } catch (ex) {
         yield notifySlackOfCardError({
           error: ex,
@@ -425,7 +307,28 @@ app.post('/pr', (req, res) => {
 
               // Not all repos will be using milestones to track deployments, so only set them up when needed
               if (reposUsingMilestones.includes(boardName)) {
-                yield githubAssignIssueToPendingMilestone(boardName, req.body.number);
+                const openMilestones = yield github.issues.getMilestones({
+                  owner: githubOwner,
+                  repo: boardName,
+                  state: 'open',
+                });
+                let pendingMilestone = _.find(openMilestones, {
+                  title: 'Deploy Pending',
+                });
+                if (!pendingMilestone) {
+                  pendingMilestone = yield github.issues.createMilestone({
+                    owner: githubOwner,
+                    repo: boardName,
+                    title: 'Deploy Pending',
+                  });
+                }
+
+                yield github.issues.edit({
+                  owner: githubOwner,
+                  repo: boardName,
+                  number: req.body.number,
+                  milestone: pendingMilestone.number,
+                });
               }
             }
 
@@ -439,7 +342,29 @@ app.post('/pr', (req, res) => {
             if (card) {
               // Update labels and add link to Trello card in the pull request
               try {
-                yield githubUpdateIssueFromTrelloCard(boardName, pullRequest, card);
+                let body = pullRequest.body || '';
+                if (!body.includes(card.shortUrl)) {
+                  if (body) {
+                    body += '\n\n';
+                  }
+
+                  body += card.shortUrl;
+                }
+
+                // Get labels applied to Trello card and filter them down to the ones we care about in Github
+                const labels = card.labels.map((trelloLabel) => {
+                  return trelloLabel.name.toLowerCase();
+                }).filter((trelloLabelName) => {
+                  return labelsToCopy.includes(trelloLabelName);
+                });
+
+                return github.issues.edit({
+                  owner: githubOwner,
+                  repo: boardName,
+                  number: pullRequest.number,
+                  body,
+                  labels,
+                });
               } catch (ex) {
                 yield notifySlackOfCardError({
                   error: ex,
