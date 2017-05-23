@@ -126,7 +126,9 @@ app.get('/deploy', (req, res) => {
           repo: boardName,
           state: 'open',
         });
-        const pendingMilestone = _.find(openMilestones, ['title', 'Deploy Pending']);
+        const pendingMilestone = _.find(openMilestones.data, {
+          title: 'Deploy Pending',
+        });
         if (pendingMilestone) {
           yield github.issues.updateMilestone({
             owner: githubOwner,
@@ -312,15 +314,15 @@ app.post('/pr', (req, res) => {
                   repo: boardName,
                   state: 'open',
                 });
-                let pendingMilestone = _.find(openMilestones, {
+                let pendingMilestone = _.find(openMilestones.data, {
                   title: 'Deploy Pending',
                 });
                 if (!pendingMilestone) {
-                  pendingMilestone = yield github.issues.createMilestone({
+                  pendingMilestone = (yield github.issues.createMilestone({
                     owner: githubOwner,
                     repo: boardName,
                     title: 'Deploy Pending',
-                  });
+                  })).data;
                 }
 
                 yield github.issues.edit({
@@ -358,7 +360,7 @@ app.post('/pr', (req, res) => {
                   return labelsToCopy.includes(trelloLabelName);
                 });
 
-                return github.issues.edit({
+                yield github.issues.edit({
                   owner: githubOwner,
                   repo: boardName,
                   number: pullRequest.number,
