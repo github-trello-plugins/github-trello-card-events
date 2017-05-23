@@ -15,7 +15,7 @@ const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
-const user = process.env.GITHUB_USER;
+const githubOwner = process.env.GITHUB_USER;
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
@@ -85,7 +85,7 @@ function* githubClosePendingMilestone(repo) {
     return new Promise((resolve, reject) => {
       // Set title to current date/time, and set status to closed
       github.issues.updateMilestone({
-        user,
+        owner: githubOwner,
         repo,
         number: pendingMilestone.number,
         title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
@@ -111,7 +111,7 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
 
   return new Promise((resolve) => {
     github.issues.edit({
-      user,
+      owner: githubOwner,
       repo,
       number: prNumber,
       milestone: pendingMilestone.number,
@@ -133,7 +133,7 @@ function* githubAssignIssueToPendingMilestone(repo, prNumber) {
 function githubGetMilestones(repo, state) {
   return new Promise((resolve) => {
     github.issues.getMilestones({
-      user,
+      owner: githubOwner,
       repo,
       state: state || 'all',
     }, (err, milestones) => {
@@ -154,7 +154,7 @@ function githubGetMilestones(repo, state) {
 function githubCreatePendingMilestone(repo) {
   return new Promise((resolve) => {
     github.issues.createMilestone({
-      user,
+      owner: githubOwner,
       repo,
       title: 'Deploy Pending',
     }, (err, milestone) => {
@@ -191,7 +191,7 @@ function githubUpdateIssueFromTrelloCard(repo, issue, trelloCard) {
     });
 
     github.issues.edit({
-      user,
+      owner: githubOwner,
       repo,
       number: issue.number,
       body,
