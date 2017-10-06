@@ -1,6 +1,5 @@
 {
   "root": true,
-  "fix": true,
   "plugins": [
     "promise"
   ],

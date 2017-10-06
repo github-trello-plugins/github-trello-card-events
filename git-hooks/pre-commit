@@ -6,7 +6,7 @@
 export PATH=/usr/local/bin:$PATH
 
 # Beautify code before committing
-grunt jsbeautifier
+node_modules/.bin/grunt jsbeautifier
 
 # ESLint stuff before committing
-grunt eslint
+node_modules/.bin/grunt eslint

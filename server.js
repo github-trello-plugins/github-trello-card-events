@@ -277,7 +277,7 @@ app.post('/pr', (req, res) => {
         const cardNumberMatches = cardNumberRegex.exec(sourceBranch);
         let cardNumber;
         if (cardNumberMatches) {
-          cardNumber = cardNumberMatches[0];
+          [cardNumber] = cardNumberMatches;
         }
 
         // If we were successful in getting the card number, that means the pull request branch was named in such
@@ -285,7 +285,9 @@ app.post('/pr', (req, res) => {
         if (cardNumber) {
           const boardName = sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
-          const action = req.body.action;
+          const {
+            action,
+          } = req.body;
           // Now that we have all the information we can get, update the card on Trello
 
           if (['opened', 'closed', 'reopened'].includes(action)) {
