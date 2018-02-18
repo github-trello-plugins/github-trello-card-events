@@ -33,3 +33,4 @@ nbproject
 .idea
 .editorconfig
 .eslintcache
+package-lock.json
