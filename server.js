@@ -8,7 +8,7 @@ const app = require('express')();
 const bodyParser = require('body-parser');
 const Trello = require('node-trello');
 const request = require('request-promise');
-const GitHubApi = require('github');
+const octokit = require('@octokit/rest');
 const moment = require('moment-timezone');
 
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
@@ -30,7 +30,7 @@ const libratoToken = process.env.LIBRATO_TOKEN;
 const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
-const github = new GitHubApi({
+const github = octokit({
   protocol: "https",
   host: "api.github.com",
   headers: {
