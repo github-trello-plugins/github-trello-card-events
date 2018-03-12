@@ -1,10 +1,11 @@
 machine:
   node:
-    version: 7
+    version: 8
 
 deployment:
   master:
     branch: master
     commands:
       - git remote add dokku dokku@dokku.mpirik.com:github-trello-card-events
+      - "[[ ! -s \"$(git rev-parse --git-dir)/shallow\" ]] || git fetch --unshallow"
       - git push -f dokku master:master
