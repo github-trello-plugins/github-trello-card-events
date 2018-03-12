@@ -6,5 +6,5 @@ deployment:
   master:
     branch: master
     commands:
-      - git remote add dokku dokku@dokku.mpirikreview.com:github-trello-card-events
+      - git remote add dokku dokku@dokku.mpirik.com:github-trello-card-events
       - git push -f dokku master:master
