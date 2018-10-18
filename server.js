@@ -285,7 +285,7 @@ app.post('/pr', (req, res) => {
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
           const repo = pullRequest.head.repo.name;
-          const boardName = sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
+          const boardName = pullRequest.head.repo.name;//sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
           const {
             action,
@@ -367,7 +367,7 @@ app.post('/pr', (req, res) => {
 
                 yield github.issues.edit({
                   owner: githubOwner,
-                  repo: boardName,
+                  repo,
                   number: pullRequest.number,
                   body,
                   labels,
