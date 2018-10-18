@@ -443,9 +443,9 @@ function* getBoardAndList(args) {
   const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
 
   const board = _.find(boards, (item) => {
-    return item.name.toLowerCase() === args.boardName;
-  }) || _.find(boards, (item) => {
       return item.name.toLowerCase() === args.repo;
+  }) || _.find(boards, (item) => {
+    return item.name.toLowerCase() === args.boardName;
   });
 
   if (!board) {
