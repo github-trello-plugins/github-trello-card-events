@@ -1,6 +1,8 @@
 # github-trello-card-events
 Update cards in trello based on GitHub events
 
+Note: Trello board name and Github repo name should match, to make moving cards and linking trello cards with PRs work a bit smoother. The code could be modified to use an env variable, but if the names match, then this service can be used for multiple boards/repos.
+
 ## Environment Variables
 Name | Description | Default Value
 ---- | ----------- | -------------
