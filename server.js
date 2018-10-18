@@ -146,6 +146,7 @@ app.get('/deploy', (req, res) => {
       }
     }
     const boardAndList = yield getBoardAndList({
+      repo: boardName,
       boardName,
       listName: listDestinationNameForMergedCards,
     });
@@ -283,6 +284,7 @@ app.post('/pr', (req, res) => {
         // If we were successful in getting the card number, that means the pull request branch was named in such
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
+          const repo = pullRequest.head.repo.name;
           const boardName = sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
           const {
@@ -310,10 +312,10 @@ app.post('/pr', (req, res) => {
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
 
               // Not all repos will be using milestones to track deployments, so only set them up when needed
-              if (reposUsingMilestones.includes(boardName)) {
+              if (reposUsingMilestones.includes(repo)) {
                 const openMilestones = yield github.issues.getMilestones({
                   owner: githubOwner,
-                  repo: boardName,
+                  repo,
                   state: 'open',
                 });
                 let pendingMilestone = _.find(openMilestones.data, {
@@ -322,14 +324,14 @@ app.post('/pr', (req, res) => {
                 if (!pendingMilestone) {
                   pendingMilestone = (yield github.issues.createMilestone({
                     owner: githubOwner,
-                    repo: boardName,
+                    repo,
                     title: 'Deploy Pending',
                   })).data;
                 }
 
                 yield github.issues.edit({
                   owner: githubOwner,
-                  repo: boardName,
+                  repo,
                   number: req.body.number,
                   milestone: pendingMilestone.number,
                 });
@@ -337,6 +339,7 @@ app.post('/pr', (req, res) => {
             }
 
             const boardAndList = yield getBoardAndList({
+              repo,
               boardName,
               listName,
             });
@@ -432,6 +435,7 @@ app.post('/pr', (req, res) => {
 /**
  * Gets the board and list objects from the specified names
  * @param {Object} args - Arguments
+ * @param {string} args.repo - Name of the repo
  * @param {string} args.boardName - Name of the board
  * @param {string} args.listName - Name of the list to move the card to
  */
@@ -440,10 +444,12 @@ function* getBoardAndList(args) {
 
   const board = _.find(boards, (item) => {
     return item.name.toLowerCase() === args.boardName;
+  }) || _.find(boards, (item) => {
+      return item.name.toLowerCase() === args.repo;
   });
 
   if (!board) {
-    throw new Error(`Unable to find board: ${args.boardName}`);
+    throw new Error(`Unable to find board: ${args.boardName} for repo: ${args.repo}`);
   }
 
   const list = _.find(board.lists, {
@@ -451,7 +457,7 @@ function* getBoardAndList(args) {
   });
 
   if (!list) {
-    throw new Error(`Unable to find list (${args.listName}) in board: ${args.boardName}`);
+    throw new Error(`Unable to find list (${args.listName}) in board: ${board}`);
   }
 
   return {
