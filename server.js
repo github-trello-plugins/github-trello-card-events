@@ -36,10 +36,7 @@ const github = octokit({
   headers: {
     "user-agent": process.env.GITHUB_USER_AGENT,
   },
-});
-github.authenticate({
-  type: "oauth",
-  token: process.env.GITHUB_API_TOKEN,
+  auth: `token ${process.env.GITHUB_API_TOKEN}`,
 });
 
 function trelloGet(...args) {
@@ -285,7 +282,7 @@ app.post('/pr', (req, res) => {
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
           const repo = pullRequest.head.repo.name;
-          const boardName = pullRequest.head.repo.name;//sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
+          const boardName = pullRequest.head.repo.name; //sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
           const {
             action,
@@ -443,7 +440,7 @@ function* getBoardAndList(args) {
   const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
 
   const board = _.find(boards, (item) => {
-      return item.name.toLowerCase() === args.repo;
+    return item.name.toLowerCase() === args.repo;
   }) || _.find(boards, (item) => {
     return item.name.toLowerCase() === args.boardName;
   });
