@@ -64,8 +64,7 @@
     "eqeqeq": ["error", "smart"],
     "func-names": "error",
     "id-length": ["error", {"exceptions": ["$", "e", "i", "j", "k", "q", "x", "y"]}],
-    // Note: indent is off since jsbeautifier handles indent formats
-    "indent": ["off"],
+    "indent": ["error", 2, {"SwitchCase": 1}],
     "no-param-reassign": "off", // Work toward enforcing this rule
     "radix": "off",
     "spaced-comment": "off",
