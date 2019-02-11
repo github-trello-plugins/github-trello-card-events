@@ -118,12 +118,12 @@ app.get('/deploy', (req, res) => {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
     if (reposUsingMilestones.includes(boardName)) {
       try {
-        const openMilestones = yield github.issues.getMilestones({
+        const openMilestones = yield github.issues.listMilestonesForRepo({
           owner: githubOwner,
           repo: boardName,
           state: 'open',
         });
-        const pendingMilestone = _.find(openMilestones.data, {
+        const pendingMilestone = _.find(openMilestones.data || [], {
           title: 'Deploy Pending',
         });
         if (pendingMilestone) {
@@ -133,7 +133,7 @@ app.get('/deploy', (req, res) => {
             number: pendingMilestone.number,
             title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
             state: 'closed',
-            due_on: new Date(),
+            due_on: new Date().toISOString(),
           });
         }
       } catch (ex) {
@@ -310,12 +310,12 @@ app.post('/pr', (req, res) => {
 
               // Not all repos will be using milestones to track deployments, so only set them up when needed
               if (reposUsingMilestones.includes(repo)) {
-                const openMilestones = yield github.issues.getMilestones({
+                const openMilestones = yield github.issues.listMilestonesForRepo({
                   owner: githubOwner,
                   repo,
                   state: 'open',
                 });
-                let pendingMilestone = _.find(openMilestones.data, {
+                let pendingMilestone = _.find(openMilestones.data || [], {
                   title: 'Deploy Pending',
                 });
                 if (!pendingMilestone) {
@@ -326,7 +326,7 @@ app.post('/pr', (req, res) => {
                   })).data;
                 }
 
-                yield github.issues.edit({
+                yield github.issues.update({
                   owner: githubOwner,
                   repo,
                   number: req.body.number,
@@ -362,7 +362,7 @@ app.post('/pr', (req, res) => {
                   return labelsToCopy.includes(trelloLabelName);
                 });
 
-                yield github.issues.edit({
+                yield github.issues.update({
                   owner: githubOwner,
                   repo,
                   number: pullRequest.number,
