@@ -16,6 +16,7 @@ const slackChannel = process.env.SLACK_CHANNEL;
 const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const githubOwner = process.env.GITHUB_USER;
+const trelloBoardName = process.env.TRELLO_BOARD_NAME;
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
@@ -39,6 +40,7 @@ const github = octokit({
   auth: `token ${process.env.GITHUB_API_TOKEN}`,
 });
 
+// NOTE: These trello functions are defined becuase the trello class didn't support promises natively
 function trelloGet(...args) {
   return new Promise((resolve, reject) => {
     trello.get(...args, (err, ...results) => {
@@ -112,39 +114,45 @@ app.get('/healthcheck', (req, res) => {
 });
 
 app.get('/deploy', (req, res) => {
-  const boardName = req.param('board');
+  const repoName = req.param('repo') || req.param('board');
 
-  co(function* deploy() {
+  co(async () => {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
-    if (reposUsingMilestones.includes(boardName)) {
+    let milestoneUrl;
+    const now = moment().tz("America/Chicago");
+    const releaseName = now.format('YYYY-MM-DD hh:mma');
+    const releaseTag = now.format('YYYY.MM.DDHHmm');
+    if (reposUsingMilestones.includes(repoName)) {
+      // Close an open Milestone with a title of "Deploy Pending"
       try {
-        const openMilestones = yield github.issues.listMilestonesForRepo({
+        const openMilestones = await github.issues.listMilestonesForRepo({
           owner: githubOwner,
-          repo: boardName,
+          repo: repoName,
           state: 'open',
         });
         const pendingMilestone = _.find(openMilestones.data || [], {
           title: 'Deploy Pending',
         });
         if (pendingMilestone) {
-          yield github.issues.updateMilestone({
+          milestoneUrl = pendingMilestone.html_url;
+          await github.issues.updateMilestone({
             owner: githubOwner,
-            repo: boardName,
+            repo: repoName,
             number: pendingMilestone.number,
-            title: `Deploy ${moment().tz("America/Chicago").format('YYYY-MM-DD hh:mma')}`,
+            title: `Deploy ${releaseName}`,
             state: 'closed',
             due_on: new Date().toISOString(),
           });
         }
       } catch (ex) {
-        yield notifySlackOfCardError({
+        await notifySlackOfCardError({
           error: ex,
         });
       }
     }
-    const boardAndList = yield getBoardAndList({
-      repo: boardName,
-      boardName,
+
+    const boardAndList = await getBoardAndList({
+      boardName: trelloBoardName,
       listName: listDestinationNameForMergedCards,
     });
     const destinationList = _.find(boardAndList.board.lists, {
@@ -152,7 +160,7 @@ app.get('/deploy', (req, res) => {
     });
 
     if (!destinationList) {
-      throw new Error(`Unable to find list (${listDestinationNameForDeployments}) in board: ${boardName}`);
+      throw new Error(`Unable to find list (${listDestinationNameForDeployments}) in board: ${trelloBoardName}`);
     }
 
     if (deployWebhookUrl) {
@@ -172,18 +180,42 @@ app.get('/deploy', (req, res) => {
         };
       }
 
-      yield request.post(webhookRequestParams).catch(() => {
+      await request.post(webhookRequestParams).catch(() => {
         // TODO: Maybe log this in the future
       });
     }
 
-    const cards = yield trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name,idList,labels`);
+    const cards = await trelloGet(`/1/lists/${boardAndList.list.id}/cards?fields=name,idList,labels,shortUrl`);
+
+    let cardsInMilestone = cards;
+    // Check to see that the card has the milestone url in it's attachments array.
+    // Milestone url is added to the card attachments array when the PR is merged
+    if (milestoneUrl) {
+      cardsInMilestone = [];
+      for (const card of cards) {
+        // eslint-disable-next-line no-await-in-loop
+        const attachments = await trelloGet(`/1/lists/${card.id}/attachments?fields=url`);
+        for (const attachment of attachments) {
+          if (attachment.url === milestoneUrl) {
+            cardsInMilestone.push(card);
+            break;
+          }
+        }
+      }
+    }
 
     // Notify slack of deployment, with summary of cards being deployed
     let slackUpdateText = deploySlackMessage;
+    let githubReleaseText = '';
     const labelsToNotify = [];
-    for (const card of cards) {
+    for (const card of cardsInMilestone) {
       slackUpdateText += `\n+ ${card.name || JSON.stringify(card)}`;
+
+      if (githubReleaseText) {
+        githubReleaseText += '\n';
+      }
+
+      githubReleaseText += `* [${card.name || JSON.stringify(card)}](${card.shortUrl})`;
 
       for (const label of card.labels) {
         if (deploySlackNotifyLabels.includes(label.name.toLowerCase()) && !labelsToNotify.includes(label.name)) {
@@ -192,8 +224,22 @@ app.get('/deploy', (req, res) => {
       }
     }
 
+    try {
+      await github.createRelease({
+        owner: githubOwner,
+        repo: repoName,
+        tag_name: releaseTag,
+        name: releaseTag,
+        body: githubReleaseText,
+      });
+    } catch (ex) {
+      await notifySlackOfCardError({
+        error: ex,
+      });
+    }
+
     if (libratoAnnotationUrl && libratoUsername && libratoToken) {
-      yield request.post({
+      await request.post({
         uri: libratoAnnotationUrl,
         method: 'POST',
         auth: {
@@ -218,7 +264,7 @@ app.get('/deploy', (req, res) => {
       slackUpdateText += `\n------------------\n${deploySlackNotifyUser}: ${labelsToNotify.join(', ')}`;
     }
 
-    yield notifySlack({
+    await notifySlack({
       slackWebhookUrl,
       text: slackUpdateText,
       sendAsText: true,
@@ -228,7 +274,8 @@ app.get('/deploy', (req, res) => {
     });
 
     for (const card of cards) {
-      yield moveCard({
+      // eslint-disable-next-line no-await-in-loop
+      await moveCard({
         board: boardAndList.board,
         list: destinationList,
         card,
@@ -239,7 +286,8 @@ app.get('/deploy', (req, res) => {
     return res.json({
       ok: true,
       message: `Moved ${cards.length} cards to ${listDestinationNameForDeployments}`,
-      boardName,
+      board: trelloBoardName,
+      repo: repoName,
     });
   }).catch((ex) => {
     return res.status(500).json({
@@ -248,12 +296,14 @@ app.get('/deploy', (req, res) => {
         message: ex.message,
         stack: ex.stack,
       },
-      boardName,
+      boardName: trelloBoardName,
       listName: listDestinationNameForDeployments,
     });
   });
 });
 
+// Handle when a PR is updated - Create a link to the PR on the card and add a link to the card to the PR description
+// Create "Deploy Pending" Milestone if there isn't one
 app.post('/pr', (req, res) => {
   const pullRequest = req.body.pull_request;
 
@@ -282,7 +332,7 @@ app.post('/pr', (req, res) => {
         // a way that we are possibly able to find the corresponding card on Trello
         if (cardNumber) {
           const repo = pullRequest.head.repo.name;
-          const boardName = pullRequest.head.repo.name; //sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
+          const boardName = trelloBoardName || pullRequest.head.repo.name; //sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
           const {
             action,
@@ -332,11 +382,19 @@ app.post('/pr', (req, res) => {
                   number: req.body.number,
                   milestone: pendingMilestone.number,
                 });
+
+                // Update the trello card with the milestone url
+                try {
+                  yield trelloPost(`/1/cards/${cardNumber}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
+                } catch (ex) {
+                  yield notifySlackOfCardError({
+                    error: ex,
+                  });
+                }
               }
             }
 
             const boardAndList = yield getBoardAndList({
-              repo,
               boardName,
               listName,
             });
@@ -432,21 +490,18 @@ app.post('/pr', (req, res) => {
 /**
  * Gets the board and list objects from the specified names
  * @param {Object} args - Arguments
- * @param {string} args.repo - Name of the repo
  * @param {string} args.boardName - Name of the board
  * @param {string} args.listName - Name of the list to move the card to
  */
-function* getBoardAndList(args) {
-  const boards = yield trelloGet(`/1/members/me/boards?lists=all&fields=name`);
+async function getBoardAndList(args) {
+  const boards = await trelloGet(`/1/members/me/boards?lists=all&fields=name`);
 
   const board = _.find(boards, (item) => {
-    return item.name.toLowerCase() === args.repo;
-  }) || _.find(boards, (item) => {
     return item.name.toLowerCase() === args.boardName;
   });
 
   if (!board) {
-    throw new Error(`Unable to find board: ${args.boardName} for repo: ${args.repo}`);
+    throw new Error(`Unable to find board: ${args.boardName}`);
   }
 
   const list = _.find(board.lists, {
@@ -476,18 +531,18 @@ function* getBoardAndList(args) {
  * @param {string} args.message - Message to add to the card on successful move
  * @returns {string} Result message
  */
-function* moveCard(args) {
+async function moveCard(args) {
   // If it's already in the list, do not attempt to move it
   if (args.card.idList === args.list.id) {
     return `Skipped. ${args.card.name} is already in ${args.list.name}`;
   }
 
-  yield trelloPut(`/1/cards/${args.card.id}`, {
+  await trelloPut(`/1/cards/${args.card.id}`, {
     idList: args.list.id,
   });
 
   try {
-    yield trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
+    await trelloPost(`/1/cards/${args.card.id}/actions/comments?text=${args.message}`);
   } catch (ex) {
     // Ignore this error - it's only the comment on the card that failed. Not the end of the world
   }
