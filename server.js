@@ -20,7 +20,7 @@ const trelloBoardName = process.env.TRELLO_BOARD_NAME;
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
-const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE || '*Deployed updates:*';
+const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE;
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
@@ -205,7 +205,7 @@ app.get('/deploy', (req, res) => {
     }
 
     // Notify slack of deployment, with summary of cards being deployed
-    let slackUpdateText = deploySlackMessage;
+    let slackUpdateText = deploySlackMessage || `*Deployed updates (${repoName}):*`;
     let githubReleaseText = '';
     const labelsToNotify = [];
     for (const card of cardsInMilestone) {
