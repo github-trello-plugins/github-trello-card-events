@@ -146,6 +146,7 @@ app.get('/deploy', (req, res) => {
         }
       } catch (ex) {
         await notifySlackOfCardError({
+          note: '/deploy',
           error: ex,
         });
       }
@@ -234,6 +235,7 @@ app.get('/deploy', (req, res) => {
       });
     } catch (ex) {
       await notifySlackOfCardError({
+        note: 'github.createRelease',
         error: ex,
       });
     }
@@ -254,6 +256,7 @@ app.get('/deploy', (req, res) => {
       }).catch((ex) => {
         co(function* sendErrorToSlack() {
           yield notifySlackOfCardError({
+            note: 'librato annotation',
             error: ex,
           });
         });
@@ -334,6 +337,9 @@ app.post('/pr', (req, res) => {
           const repo = pullRequest.head.repo.name;
           const boardName = trelloBoardName || pullRequest.head.repo.name; //sourceBranch.slice(0, sourceBranch.length - cardNumber.length - 1);
 
+          let boardAndList;
+          let card;
+
           const {
             action,
           } = req.body;
@@ -383,23 +389,35 @@ app.post('/pr', (req, res) => {
                   milestone: pendingMilestone.number,
                 });
 
+                boardAndList = yield getBoardAndList({
+                  boardName,
+                  listName,
+                });
+
+                card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+
                 // Update the trello card with the milestone url
-                try {
-                  yield trelloPost(`/1/cards/${cardNumber}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
-                } catch (ex) {
-                  yield notifySlackOfCardError({
-                    error: ex,
-                  });
+                if (card) {
+                  try {
+                    yield trelloPost(`/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
+                  } catch (ex) {
+                    yield notifySlackOfCardError({
+                      note: 'Update trello with milestone url',
+                      error: ex,
+                    });
+                  }
                 }
               }
             }
 
-            const boardAndList = yield getBoardAndList({
-              boardName,
-              listName,
-            });
+            if (!boardAndList) {
+              boardAndList = yield getBoardAndList({
+                boardName,
+                listName,
+              });
 
-            const card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+              card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+            }
 
             if (card) {
               // Update labels and add link to Trello card in the pull request
@@ -429,6 +447,7 @@ app.post('/pr', (req, res) => {
                 });
               } catch (ex) {
                 yield notifySlackOfCardError({
+                  note: 'Update labels on PR from card',
                   error: ex,
                   card: sourceBranch,
                 });
@@ -461,6 +480,7 @@ app.post('/pr', (req, res) => {
     }).catch((ex) => {
       co(function* sendErrorToSlack() {
         return yield notifySlackOfCardError({
+          note: '/pr',
           error: ex,
           card: sourceBranch,
         });
@@ -554,6 +574,7 @@ async function moveCard(args) {
  * Sends a notification to a Slack channel about an error
  *
  * @param {Object} args Arguments
+ * @param {string} args.note - Note related to what threw the error
  * @param {Error} args.error - Error returned from a request
  * @param {string} [args.card] - Card ({board}-{card number}) that is being moved
  */
@@ -562,7 +583,7 @@ function notifySlackOfCardError(args) {
     return;
   }
 
-  let text = ':poop:';
+  let text = `:poop: ${args.note || ''}`;
   if (args.card) {
     text = `Unable to move \`${args.card}\``;
   }
