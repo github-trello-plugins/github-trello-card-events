@@ -28,7 +28,6 @@ const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '').s
 const libratoAnnotationUrl = process.env.LIBRATO_ANNOTATION_URL;
 const libratoUsername = process.env.LIBRATO_USERNAME;
 const libratoToken = process.env.LIBRATO_TOKEN;
-const reposUsingMilestones = (process.env.REPOS_USING_MILESTONES || '').split(',');
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
 const github = octokit({
@@ -122,34 +121,32 @@ app.get('/deploy', (req, res) => {
     const now = moment().tz("America/Chicago");
     const releaseName = now.format('YYYY-MM-DD hh:mma');
     const releaseTag = now.format('YYYY.MM.DDHHmm');
-    if (reposUsingMilestones.includes(repoName)) {
-      // Close an open Milestone with a title of "Deploy Pending"
-      try {
-        const openMilestones = await github.issues.listMilestonesForRepo({
+    // Close an open Milestone with a title of "Deploy Pending"
+    try {
+      const openMilestones = await github.issues.listMilestonesForRepo({
+        owner: githubOwner,
+        repo: repoName,
+        state: 'open',
+      });
+      const pendingMilestone = _.find(openMilestones.data || [], {
+        title: 'Deploy Pending',
+      });
+      if (pendingMilestone) {
+        milestoneUrl = pendingMilestone.html_url;
+        await github.issues.updateMilestone({
           owner: githubOwner,
           repo: repoName,
-          state: 'open',
-        });
-        const pendingMilestone = _.find(openMilestones.data || [], {
-          title: 'Deploy Pending',
-        });
-        if (pendingMilestone) {
-          milestoneUrl = pendingMilestone.html_url;
-          await github.issues.updateMilestone({
-            owner: githubOwner,
-            repo: repoName,
-            number: pendingMilestone.number,
-            title: `Deploy ${releaseName}`,
-            state: 'closed',
-            due_on: new Date().toISOString(),
-          });
-        }
-      } catch (ex) {
-        await notifySlackOfCardError({
-          note: '/deploy',
-          error: ex,
+          number: pendingMilestone.number,
+          title: `Deploy ${releaseName}`,
+          state: 'closed',
+          due_on: new Date().toISOString(),
         });
       }
+    } catch (ex) {
+      await notifySlackOfCardError({
+        note: '/deploy',
+        error: ex,
+      });
     }
 
     const boardAndList = await getBoardAndList({
@@ -364,48 +361,45 @@ app.post('/pr', (req, res) => {
               listName = listDestinationNameForMergedCards;
               message = `Pull request merged by ${pullRequest.merged_by.login}`;
 
-              // Not all repos will be using milestones to track deployments, so only set them up when needed
-              if (reposUsingMilestones.includes(repo)) {
-                const openMilestones = yield github.issues.listMilestonesForRepo({
+              const openMilestones = yield github.issues.listMilestonesForRepo({
+                owner: githubOwner,
+                repo,
+                state: 'open',
+              });
+              let pendingMilestone = _.find(openMilestones.data || [], {
+                title: 'Deploy Pending',
+              });
+              if (!pendingMilestone) {
+                pendingMilestone = (yield github.issues.createMilestone({
                   owner: githubOwner,
                   repo,
-                  state: 'open',
-                });
-                let pendingMilestone = _.find(openMilestones.data || [], {
                   title: 'Deploy Pending',
-                });
-                if (!pendingMilestone) {
-                  pendingMilestone = (yield github.issues.createMilestone({
-                    owner: githubOwner,
-                    repo,
-                    title: 'Deploy Pending',
-                  })).data;
-                }
+                })).data;
+              }
 
-                yield github.issues.update({
-                  owner: githubOwner,
-                  repo,
-                  number: req.body.number,
-                  milestone: pendingMilestone.number,
-                });
+              yield github.issues.update({
+                owner: githubOwner,
+                repo,
+                number: req.body.number,
+                milestone: pendingMilestone.number,
+              });
 
-                boardAndList = yield getBoardAndList({
-                  boardName,
-                  listName,
-                });
+              boardAndList = yield getBoardAndList({
+                boardName,
+                listName,
+              });
 
-                card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
+              card = yield trelloGet(`/1/boards/${boardAndList.board.id}/cards/${cardNumber}`);
 
-                // Update the trello card with the milestone url
-                if (card) {
-                  try {
-                    yield trelloPost(`/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
-                  } catch (ex) {
-                    yield notifySlackOfCardError({
-                      note: 'Update trello with milestone url',
-                      error: ex,
-                    });
-                  }
+              // Update the trello card with the milestone url
+              if (card) {
+                try {
+                  yield trelloPost(`/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
+                } catch (ex) {
+                  yield notifySlackOfCardError({
+                    note: 'Update trello with milestone url',
+                    error: ex,
+                  });
                 }
               }
             }
