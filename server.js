@@ -223,7 +223,7 @@ app.get('/deploy', (req, res) => {
     }
 
     try {
-      await github.createRelease({
+      await github.repos.createRelease({
         owner: githubOwner,
         repo: repoName,
         tag_name: releaseTag,
