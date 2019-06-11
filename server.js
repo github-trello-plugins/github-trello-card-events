@@ -17,6 +17,7 @@ const devKey = process.env.DEV_KEY;
 const appToken = process.env.APP_TOKEN;
 const githubOwner = process.env.GITHUB_USER;
 const trelloBoardName = process.env.TRELLO_BOARD_NAME;
+const reposUsingReleases = (process.env.REPOS_USING_RELEASES || '').split('');
 const deployWebhookUrl = process.env.DEPLOY_WEBHOOK_URL;
 const deployWebhookUsername = process.env.DEPLOY_WEBHOOK_USERNAME;
 const deployWebhookPassword = process.env.DEPLOY_WEBHOOK_PASSWORD;
@@ -222,19 +223,21 @@ app.get('/deploy', (req, res) => {
       }
     }
 
-    try {
-      await github.repos.createRelease({
-        owner: githubOwner,
-        repo: repoName,
-        tag_name: releaseTag,
-        name: releaseTag,
-        body: githubReleaseText,
-      });
-    } catch (ex) {
-      await notifySlackOfCardError({
-        note: 'github.createRelease',
-        error: ex,
-      });
+    if (reposUsingReleases.includes(repoName)) {
+      try {
+        await github.repos.createRelease({
+          owner: githubOwner,
+          repo: repoName,
+          tag_name: releaseTag,
+          name: releaseTag,
+          body: githubReleaseText,
+        });
+      } catch (ex) {
+        await notifySlackOfCardError({
+          note: 'github.createRelease',
+          error: ex,
+        });
+      }
     }
 
     if (libratoAnnotationUrl && libratoUsername && libratoToken) {
@@ -273,7 +276,7 @@ app.get('/deploy', (req, res) => {
       username: deploySlackUsername,
     });
 
-    for (const card of cards) {
+    for (const card of cardsInMilestone) {
       // eslint-disable-next-line no-await-in-loop
       await moveCard({
         board: boardAndList.board,
