@@ -1,8 +1,6 @@
 'use strict';
 
-/* eslint-disable id-length */
 const _ = require('lodash');
-/* eslint-enable id-length */
 const co = require('co');
 const app = require('express')();
 const bodyParser = require('body-parser');
@@ -24,17 +22,19 @@ const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE;
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
-const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '').split(',').map((label) => label.toLowerCase());
+const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '')
+  .split(',')
+  .map((label) => label.toLowerCase());
 const libratoAnnotationUrl = process.env.LIBRATO_ANNOTATION_URL;
 const libratoUsername = process.env.LIBRATO_USERNAME;
 const libratoToken = process.env.LIBRATO_TOKEN;
 const labelsToCopy = (process.env.LABELS_TO_COPY || '').split(',');
 const trello = new Trello(devKey, appToken);
 const github = octokit({
-  protocol: "https",
-  host: "api.github.com",
+  protocol: 'https',
+  host: 'api.github.com',
   headers: {
-    "user-agent": process.env.GITHUB_USER_AGENT,
+    'user-agent': process.env.GITHUB_USER_AGENT,
   },
   auth: `token ${process.env.GITHUB_API_TOKEN}`,
 });
@@ -118,7 +118,7 @@ app.get('/deploy', (req, res) => {
   co(async () => {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
     let milestoneUrl;
-    const now = moment().tz("America/Chicago");
+    const now = moment().tz('America/Chicago');
     const releaseName = now.format('YYYY-MM-DD hh:mma');
     const releaseTag = now.format('YYYY-MM-DDTHHmm');
     // Close an open Milestone with a title of "Deploy Pending"
@@ -242,26 +242,28 @@ app.get('/deploy', (req, res) => {
     }
 
     if (libratoAnnotationUrl && libratoUsername && libratoToken) {
-      await request.post({
-        uri: libratoAnnotationUrl,
-        method: 'POST',
-        auth: {
-          user: libratoUsername,
-          pass: libratoToken,
-        },
-        json: {
-          title: 'Deployment',
-          description: slackUpdateText,
-        },
-        timeout: 5000,
-      }).catch((ex) => {
-        co(function* sendErrorToSlack() {
-          yield notifySlackOfCardError({
-            note: 'librato annotation',
-            error: ex,
+      await request
+        .post({
+          uri: libratoAnnotationUrl,
+          method: 'POST',
+          auth: {
+            user: libratoUsername,
+            pass: libratoToken,
+          },
+          json: {
+            title: 'Deployment',
+            description: slackUpdateText,
+          },
+          timeout: 5000,
+        })
+        .catch((ex) => {
+          co(function* sendErrorToSlack() {
+            yield notifySlackOfCardError({
+              note: 'librato annotation',
+              error: ex,
+            });
           });
         });
-      });
     }
 
     if (labelsToNotify.length) {
@@ -312,16 +314,17 @@ app.post('/pr', (req, res) => {
   const pullRequest = req.body.pull_request;
 
   if (pullRequest) {
-
     sourceBranch = pullRequest.head.ref;
     destinationBranch = pullRequest.base.ref;
 
     co(function* pr() {
-      if (sourceBranch && destinationBranch && destinationBranch !== "review") {
-
+      if (sourceBranch && destinationBranch && destinationBranch !== 'review') {
         // Trim the branch name of any possible leading/trailing whitespaces, replace any non alphanumeric characters
         // with '-', and convert it all to lowercase
-        sourceBranch = sourceBranch.trim().replace(/\W+/g, '-').toLowerCase();
+        sourceBranch = sourceBranch
+          .trim()
+          .replace(/\W+/g, '-')
+          .toLowerCase();
 
         // Next, we'll grab the number out of the branch, which is the card number
         // The card number is also the short ID of the Trello card (attribute is idShort)
@@ -341,9 +344,7 @@ app.post('/pr', (req, res) => {
           let boardAndList;
           let card;
 
-          const {
-            action,
-          } = req.body;
+          const { action } = req.body;
           // Now that we have all the information we can get, update the card on Trello
 
           if (['opened', 'closed', 'reopened'].includes(action)) {
@@ -398,7 +399,9 @@ app.post('/pr', (req, res) => {
               // Update the trello card with the milestone url
               if (card) {
                 try {
-                  yield trelloPost(`/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
+                  yield trelloPost(
+                    `/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`
+                  );
                 } catch (ex) {
                   yield notifySlackOfCardError({
                     note: 'Update trello with milestone url',
@@ -430,11 +433,9 @@ app.post('/pr', (req, res) => {
                 }
 
                 // Get labels applied to Trello card and filter them down to the ones we care about in Github
-                const labels = card.labels.map((trelloLabel) => {
-                  return trelloLabel.name.toLowerCase();
-                }).filter((trelloLabelName) => {
-                  return labelsToCopy.includes(trelloLabelName);
-                });
+                const labels = card.labels
+                  .map((trelloLabel) => trelloLabel.name.toLowerCase())
+                  .filter((trelloLabelName) => labelsToCopy.includes(trelloLabelName));
 
                 yield github.issues.update({
                   owner: githubOwner,
@@ -624,12 +625,14 @@ function notifySlack(args) {
   if (args.sendAsText) {
     payload.text = args.text;
   } else {
-    payload.attachments = [{
-      fallback: args.text,
-      text: args.text,
-      mrkdwn_in: ['text'],
-      color: args.borderColor,
-    }];
+    payload.attachments = [
+      {
+        fallback: args.text,
+        text: args.text,
+        mrkdwn_in: ['text'],
+        color: args.borderColor,
+      },
+    ];
   }
 
   const options = {
