@@ -1,35 +1,30 @@
 {
   "root": true,
-  "plugins": [
-    "promise"
-  ],
-  "extends": "airbnb-base",
+  "plugins": ["prettier", "promise"],
+  "extends": ["airbnb-base", "prettier"],
   "env": {
     "node": true
   },
   "parserOptions": {
     "sourceType": "script"
   },
-  // Note:
-  //  0 = ignore rule
-  //  1 = warn
-  //  2 = error
   "rules": {
-    "array-bracket-spacing": ["error", "never"],
-    "brace-style": ["error", "1tbs"],
+    "prettier/prettier": [
+      "error",
+      {},
+      {
+        "usePrettierrc": true
+      }
+    ],
     "curly": ["error", "all"],
     "callback-return": ["error", ["callback", "cb", "next", "done"]],
     "class-methods-use-this": "off",
-    "comma-dangle": ["error", "always-multiline"],
     "consistent-return": "off",
-    "computed-property-spacing": ["error", "never"],
-    "handle-callback-err": ["error", "^.*err" ],
-    "max-len": "off",
+    "handle-callback-err": ["error", "^.*err"],
     "new-cap": "off",
     "no-console": "off",
     "no-else-return": "error",
     "no-eq-null": "off",
-    "no-extra-semi": "error",
     "no-global-assign": "error",
     "no-loop-func": "off",
     "no-lone-blocks": "error",
@@ -41,13 +36,6 @@
     "no-unsafe-negation": "error",
     "no-use-before-define": ["error", "nofunc"],
     "no-useless-rename": "error",
-    "object-curly-spacing": ["error", "always", { "objectsInObjects": true, "arraysInObjects": false }],
-    "quotes": "off",
-    "quote-props": ["error", "as-needed"],
-    "keyword-spacing": "error",
-    "space-before-blocks": "error",
-    "space-before-function-paren": ["error", {"anonymous": "always", "named": "never"}],
-    "space-in-parens": "off",
     "strict": "error",
     "no-empty": "error",
     "no-empty-function": "error",
@@ -55,23 +43,20 @@
 
     "promise/always-return": "error",
     "promise/always-catch": "off",
-    "promise/catch-or-return": ["error", {"allowThen": true }],
+    "promise/catch-or-return": ["error", { "allowThen": true }],
     "promise/no-native": "off",
     "promise/param-names": "error",
 
     // Override airbnb
-    "padded-blocks": "off",
     "eqeqeq": ["error", "smart"],
     "func-names": "error",
-    "id-length": ["error", {"exceptions": ["$", "e", "i", "j", "k", "q", "x", "y"]}],
-    "indent": ["error", 2, {"SwitchCase": 1}],
+    "id-length": [
+      "error",
+      { "exceptions": ["$", "_", "e", "i", "j", "k", "q", "x", "y"] }
+    ],
     "no-param-reassign": "off", // Work toward enforcing this rule
     "radix": "off",
     "spaced-comment": "off",
-    "generator-star-spacing": ["error", {"before": false, "after": true}],
-    "arrow-body-style": "off",
-    "no-multiple-empty-lines": ["error", { "max": 1, "maxEOF": 1 }],
-    "newline-per-chained-call": "off",
     "no-continue": "off",
     "no-plusplus": "off",
     "no-prototype-builtins": "off",
@@ -81,20 +66,24 @@
       "LabeledStatement",
       "WithStatement"
     ],
-    "no-restricted-properties": ["error", {
-      "object": "arguments",
-      "property": "callee",
-      "message": "arguments.callee is deprecated",
-    }, {
-      "property": "__defineGetter__",
-      "message": "Please use Object.defineProperty instead.",
-    }, {
-      "property": "__defineSetter__",
-      "message": "Please use Object.defineProperty instead.",
-    }],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "arguments",
+        "property": "callee",
+        "message": "arguments.callee is deprecated"
+      },
+      {
+        "property": "__defineGetter__",
+        "message": "Please use Object.defineProperty instead."
+      },
+      {
+        "property": "__defineSetter__",
+        "message": "Please use Object.defineProperty instead."
+      }
+    ],
     "no-useless-escape": "off",
-    "arrow-parens": ["error", "always"],
-    "prefer-arrow-callback": ["error", { "allowNamedFunctions": true }],
+    // "prefer-arrow-callback": ["error", { "allowNamedFunctions": true }],
     "prefer-spread": "error"
   }
 }
