@@ -192,7 +192,11 @@ app.get('/deploy', (req, res) => {
       cardsInMilestone = [];
       for (const card of cards) {
         // eslint-disable-next-line no-await-in-loop
-        const attachments = await trelloGet(`/1/cards/${card.id}/attachments?fields=url`);
+        const attachments = await trelloGet(`/1/cards/${card.id}/attachments?fields=id,url`);
+        if (!_.some(attachments)) {
+          cardsInMilestone.push(card);
+        }
+
         for (const attachment of attachments) {
           if (attachment.url === milestoneUrl) {
             cardsInMilestone.push(card);
