@@ -120,7 +120,7 @@ app.get('/deploy', (req, res) => {
     let milestoneUrl;
     const now = moment().tz("America/Chicago");
     const releaseName = now.format('YYYY-MM-DD hh:mma');
-    const releaseTag = now.format('YYYY-MM-DD-HHmm');
+    const releaseTag = now.format('YYYY-MM-DDTHHmm');
     // Close an open Milestone with a title of "Deploy Pending"
     try {
       const openMilestones = await github.issues.listMilestonesForRepo({
