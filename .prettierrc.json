@@ -5,14 +5,14 @@
       "options": {
         "arrowParens": "always",
         "bracketSpacing": true,
-        "printWidth": 120,
+        "printWidth": 200,
         "parser": "flow",
         "quoteProps": "as-needed",
         "semi": true,
         "singleQuote": true,
         "tabs": false,
         "tabWidth": 2,
-        "trailingComma": "es5"
+        "trailingComma": "all"
       }
     },
     {

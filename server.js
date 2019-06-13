@@ -22,9 +22,7 @@ const deploySlackMessage = process.env.DEPLOY_SLACK_MESSAGE;
 const deploySlackChannel = process.env.DEPLOY_SLACK_CHANNEL;
 const deploySlackUsername = process.env.DEPLOY_SLACK_USERNAME;
 const deploySlackNotifyUser = process.env.DEPLOY_SLACK_NOTIFY_USER || '@developers';
-const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '')
-  .split(',')
-  .map((label) => label.toLowerCase());
+const deploySlackNotifyLabels = (process.env.DEPLOY_SLACK_NOTIFY_LABELS || '').split(',').map((label) => label.toLowerCase());
 const libratoAnnotationUrl = process.env.LIBRATO_ANNOTATION_URL;
 const libratoUsername = process.env.LIBRATO_USERNAME;
 const libratoToken = process.env.LIBRATO_TOKEN;
@@ -399,9 +397,7 @@ app.post('/pr', (req, res) => {
               // Update the trello card with the milestone url
               if (card) {
                 try {
-                  yield trelloPost(
-                    `/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`
-                  );
+                  yield trelloPost(`/1/cards/${card.id}/attachments?name=github-milestone&url=${pendingMilestone.html_url}`);
                 } catch (ex) {
                   yield notifySlackOfCardError({
                     note: 'Update trello with milestone url',
@@ -433,9 +429,7 @@ app.post('/pr', (req, res) => {
                 }
 
                 // Get labels applied to Trello card and filter them down to the ones we care about in Github
-                const labels = card.labels
-                  .map((trelloLabel) => trelloLabel.name.toLowerCase())
-                  .filter((trelloLabelName) => labelsToCopy.includes(trelloLabelName));
+                const labels = card.labels.map((trelloLabel) => trelloLabel.name.toLowerCase()).filter((trelloLabelName) => labelsToCopy.includes(trelloLabelName));
 
                 yield github.issues.update({
                   owner: githubOwner,
