@@ -111,7 +111,7 @@ app.get('/healthcheck', (req, res) => {
 });
 
 app.get('/deploy', (req, res) => {
-  const repoName = req.param('repo') || req.param('board');
+  const repoName = req.query.repo || req.query.board;
 
   co(async () => {
     // Not all repos will be using milestones to track deployments, so only set them up when needed
