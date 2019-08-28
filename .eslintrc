@@ -36,7 +36,7 @@
     "no-unsafe-negation": "error",
     "no-use-before-define": ["error", "nofunc"],
     "no-useless-rename": "error",
-    "strict": "error",
+    "strict": ["error", "safe"],
     "no-empty": "error",
     "no-empty-function": "error",
     "yoda": "error",
