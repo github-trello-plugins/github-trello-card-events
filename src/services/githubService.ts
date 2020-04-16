@@ -37,78 +37,80 @@ export function getExtendedGitHubClient(): GitHubWithTrelloApi {
     },
   };
 
-  Object.assign(github.trello, {
-    listBoards: github.request.defaults({
-      method: 'GET',
-      url: 'https://api.trello.com/1/members/me/boards?key=:key&token=:token&lists=all&fields=name',
-      params: {
-        ...trelloKeyTokenParams,
-      },
-    }),
-    getCard: github.request.defaults({
-      method: 'GET',
-      url: 'https://api.trello.com/1/boards/:boardId/cards/:cardNumber?key=:key&token=:token',
-      params: {
-        ...trelloKeyTokenParams,
-        boardId: {
-          required: true,
-          type: 'string',
+  Object.assign(github, {
+    trello: {
+      listBoards: github.request.defaults({
+        method: 'GET',
+        url: 'https://api.trello.com/1/members/me/boards?key=:key&token=:token&lists=all&fields=name',
+        params: {
+          ...trelloKeyTokenParams,
         },
-        cardNumber: {
-          required: true,
-          type: 'string',
+      }),
+      getCard: github.request.defaults({
+        method: 'GET',
+        url: 'https://api.trello.com/1/boards/:boardId/cards/:cardNumber?key=:key&token=:token',
+        params: {
+          ...trelloKeyTokenParams,
+          boardId: {
+            required: true,
+            type: 'string',
+          },
+          cardNumber: {
+            required: true,
+            type: 'string',
+          },
         },
-      },
-    }),
-    moveCard: github.request.defaults({
-      method: 'PUT',
-      url: 'https://api.trello.com/1/cards/:cardId',
-      params: {
-        ...trelloKeyTokenParams,
-        cardId: {
-          required: true,
-          type: 'string',
+      }),
+      moveCard: github.request.defaults({
+        method: 'PUT',
+        url: 'https://api.trello.com/1/cards/:cardId',
+        params: {
+          ...trelloKeyTokenParams,
+          cardId: {
+            required: true,
+            type: 'string',
+          },
+          idList: {
+            required: true,
+            type: 'string',
+          },
         },
-        idList: {
-          required: true,
-          type: 'string',
+      }),
+      addAttachmentToCard: github.request.defaults({
+        method: 'POST',
+        url: 'https://api.trello.com/1/cards/:cardId/attachments?key=:key&token=:token&name=:name&url=:url',
+        params: {
+          ...trelloKeyTokenParams,
+          cardId: {
+            required: true,
+            type: 'string',
+          },
+          name: {
+            required: true,
+            type: 'string',
+          },
+          url: {
+            required: true,
+            type: 'string',
+          },
         },
-      },
-    }),
-    addAttachmentToCard: github.request.defaults({
-      method: 'POST',
-      url: 'https://api.trello.com/1/cards/:cardId/attachments?key=:key&token=:token&name=:name&url=:url',
-      params: {
-        ...trelloKeyTokenParams,
-        cardId: {
-          required: true,
-          type: 'string',
+      }),
+      addCommentToCard: github.request.defaults({
+        method: 'POST',
+        url: 'https://api.trello.com/1/cards/:cardId/actions/comments',
+        params: {
+          ...trelloKeyTokenParams,
+          cardId: {
+            required: true,
+            type: 'string',
+          },
+          text: {
+            required: true,
+            type: 'string',
+          },
         },
-        name: {
-          required: true,
-          type: 'string',
-        },
-        url: {
-          required: true,
-          type: 'string',
-        },
-      },
-    }),
-    addCommentToCard: github.request.defaults({
-      method: 'POST',
-      url: 'https://api.trello.com/1/cards/:cardId/actions/comments',
-      params: {
-        ...trelloKeyTokenParams,
-        cardId: {
-          required: true,
-          type: 'string',
-        },
-        text: {
-          required: true,
-          type: 'string',
-        },
-      },
-    }),
+      }),
+    },
   });
 
   return github;
