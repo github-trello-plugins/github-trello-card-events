@@ -34,3 +34,5 @@ nbproject
 .editorconfig
 .eslintcache
 package-lock.json
+
+dist/

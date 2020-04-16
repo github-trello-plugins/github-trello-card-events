@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "lib": ["esnext"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+
+    "esModuleInterop": true,
+    "inlineSourceMap": true,
+
+    "baseUrl": ".",
+    "outDir": "dist",
+
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
