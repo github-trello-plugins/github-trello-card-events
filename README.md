@@ -20,7 +20,7 @@ GITHUB_USER_AGENT | Github API user agent
 GITHUB_TOKEN | Github API token
 GITHUB_SECRET | Secret used for validating requests
 PR_OPEN_DEST_LIST | Trello list for open pull requests pending review | Review
-PR_MERGE_DEST_LIST | Trello list for closed pull requests pending deployment | Deploy
+PR_MERGE_DEST_LIST | Trello list for merged pull requests pending deployment | Deploy
 PR_CLOSE_DEST_LIST | Trello list for closed pull requests pending deployment | Doing
 
 ## GitHub event webhook url query strings
@@ -28,6 +28,8 @@ PR_CLOSE_DEST_LIST | Trello list for closed pull requests pending deployment | D
 Name | Description | Required
 ---- | ----------- | --------
 boardName | Trello board name | Yes
-dest | Destination trello list name | No
+pr_merge_dest | Destination trello list name for PR merge events | No
+pr_close_dest | Destination trello list name for PR close events | No
+pr_open_dest | Destination trello list name for PR open events | No
 closeMilestone | Immediately close created milestone when PR is merged | No
 

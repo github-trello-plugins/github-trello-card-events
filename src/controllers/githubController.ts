@@ -31,7 +31,9 @@ export const index = async (req: Request, res: Response) => {
       throw new Error('`boardName` query string is not defined.');
     }
 
-    const destinationList = req.query.dest as string | undefined;
+    const prMergeDestinationList = req.query.pr_merge_dest as string | undefined;
+    const prCloseDestinationList = req.query.pr_close_dest as string | undefined;
+    const prOpenDestinationList = req.query.pr_open_dest as string | undefined;
 
     let workflow: WorkflowBase;
 
@@ -46,7 +48,7 @@ export const index = async (req: Request, res: Response) => {
             workflow = new PullRequestMerged({
               eventPayload: payload,
               trelloBoardName,
-              destinationList: destinationList || process.env.PR_MERGE_DEST_LIST || 'Deploy',
+              destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Deploy',
               closeMilestone: req.query.closeMilestone !== 'false',
             });
           } else {
@@ -54,7 +56,7 @@ export const index = async (req: Request, res: Response) => {
             workflow = new WorkingOnCard({
               eventPayload: payload,
               trelloBoardName,
-              destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+              destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
             });
           }
         } else {
@@ -62,7 +64,7 @@ export const index = async (req: Request, res: Response) => {
           workflow = new PullRequestReady({
             eventPayload: payload,
             trelloBoardName,
-            destinationList: destinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
+            destinationList: prOpenDestinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
           });
         }
       } else {
@@ -70,7 +72,7 @@ export const index = async (req: Request, res: Response) => {
         workflow = new WorkingOnCard({
           eventPayload: payload,
           trelloBoardName,
-          destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+          destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
         });
       }
 
