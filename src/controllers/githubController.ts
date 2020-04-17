@@ -34,42 +34,49 @@ export const index = async (req: Request, res: Response) => {
     const destinationList = req.query.dest as string | undefined;
 
     let workflow: WorkflowBase;
-    if (payload.pull_request) {
-      if (payload.action === 'closed') {
-        if (payload.pull_request.merged) {
-          // pull_request closed (merged)
-          workflow = new PullRequestMerged({
-            eventPayload: payload,
-            trelloBoardName,
-            destinationList: destinationList || process.env.PR_MERGE_DEST_LIST || 'Deploy',
-            closeMilestone: req.query.closeMilestone !== 'false',
-          });
+
+    let result: string;
+    if (payload.zen) {
+      result = 'Feeling very zen-like!';
+    } else {
+      if (payload.pull_request) {
+        if (payload.action === 'closed') {
+          if (payload.pull_request.merged) {
+            // pull_request closed (merged)
+            workflow = new PullRequestMerged({
+              eventPayload: payload,
+              trelloBoardName,
+              destinationList: destinationList || process.env.PR_MERGE_DEST_LIST || 'Deploy',
+              closeMilestone: req.query.closeMilestone !== 'false',
+            });
+          } else {
+            // pull_request closed (not merged)
+            workflow = new WorkingOnCard({
+              eventPayload: payload,
+              trelloBoardName,
+              destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+            });
+          }
         } else {
-          // pull_request closed (not merged)
-          workflow = new WorkingOnCard({
+          // pull_request opened or reopened
+          workflow = new PullRequestReady({
             eventPayload: payload,
             trelloBoardName,
-            destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+            destinationList: destinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
           });
         }
       } else {
-        // pull_request opened or reopened
-        workflow = new PullRequestReady({
+        // Branch created
+        workflow = new WorkingOnCard({
           eventPayload: payload,
           trelloBoardName,
-          destinationList: destinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
+          destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
         });
       }
-    } else {
-      // Branch created
-      workflow = new WorkingOnCard({
-        eventPayload: payload,
-        trelloBoardName,
-        destinationList: destinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
-      });
+
+      result = await workflow.execute();
     }
 
-    const result = await workflow.execute();
     return res.json({
       ok: true,
       result,
