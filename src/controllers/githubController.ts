@@ -81,6 +81,7 @@ export const index = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
+      event: req.header('X-GitHub-Event'),
       result,
     });
   } catch (ex) {
