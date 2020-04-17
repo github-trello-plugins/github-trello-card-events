@@ -2,6 +2,7 @@ import * as crypto from 'crypto';
 import { Request, Response } from 'express';
 import { postErrorMessage } from '../services/slackService';
 import { PullRequestMerged, PullRequestReady, WorkflowBase, WorkingOnCard } from '../workflows';
+import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
 
 export const index = async (req: Request, res: Response) => {
   try {
@@ -18,7 +19,7 @@ export const index = async (req: Request, res: Response) => {
       }
 
       const hmac = crypto.createHmac('sha1', secret);
-      const hexDigest = hmac.update(payload).digest('hex');
+      const hexDigest = hmac.update((req as IRequestWithRawBody).rawBody).digest('hex');
       const digest = Buffer.from(`sha1=${hexDigest}`, 'utf8');
       const checksum = Buffer.from(signature, 'utf8');
       if (checksum.length !== digest.length || !crypto.timingSafeEqual(digest, checksum)) {

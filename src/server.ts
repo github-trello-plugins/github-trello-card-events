@@ -1,7 +1,7 @@
 import errorHandler from 'errorhandler';
 import express from 'express';
 import bodyParser from 'body-parser';
-
+import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
 import * as homeController from './controllers/homeController';
 import * as deployController from './controllers/deployController';
 import * as githubController from './controllers/githubController';
@@ -9,7 +9,13 @@ import * as githubController from './controllers/githubController';
 const app = express();
 
 app.set('port', process.env.PORT || 1339);
-app.use(bodyParser.json());
+app.use(
+  bodyParser.json({
+    verify(req: IRequestWithRawBody, _: express.Response, rawBody: Buffer) {
+      req.rawBody = rawBody;
+    },
+  }),
+);
 app.use(errorHandler());
 
 // Hook up routes
