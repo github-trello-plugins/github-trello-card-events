@@ -16,7 +16,7 @@ app.use(errorHandler());
 app.get('/', homeController.index);
 app.get('/healthcheck', homeController.healthCheck);
 // One entry point for all github events
-app.get('/github', githubController.index);
+app.post('/github', githubController.index);
 
 // TODO: Remove this legacy url
 app.get('/deploy', deployController.index);
