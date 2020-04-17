@@ -5,9 +5,9 @@ import { PullRequestMerged, PullRequestReady, WorkflowBase, WorkingOnCard } from
 
 export const index = async (req: Request, res: Response) => {
   try {
-    const { payload } = req.body;
+    const payload = req.body;
     if (!payload) {
-      throw new Error(`Unable to find payload in github event: ${JSON.stringify(req.body, null, 1)}`);
+      throw new Error(`Unable to find payload in github event: ${JSON.stringify(req, null, 1)}`);
     }
 
     const secret = process.env.GITHUB_SECRET;
