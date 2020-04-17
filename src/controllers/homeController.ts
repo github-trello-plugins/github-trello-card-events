@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { getExtendedGitHubClient, assertValidTrelloResponse } from '../services/githubService';
 import type { IBoard } from '../types/trello';
+import { TrelloService } from '../services/trelloService';
 
 export const index = (_: Request, res: Response) => {
   return res.send(':)');
@@ -8,18 +8,18 @@ export const index = (_: Request, res: Response) => {
 
 export const healthCheck = async (_: Request, res: Response) => {
   try {
-    const github = getExtendedGitHubClient();
-    const listBoardsResponse = await github.trello.listBoards();
-    assertValidTrelloResponse(listBoardsResponse, 'Unable to fetch boards');
+    const trello = new TrelloService();
+    const boards = await trello.listBoards();
 
     return res.json({
       ok: true,
-      boards: listBoardsResponse.data.map((board: IBoard) => board.name),
+      boards: boards.map((board: IBoard) => board.name),
     });
   } catch (ex) {
     return res.status(500).json({
       ok: false,
       err: {
+        code: ex.code,
         message: ex.message,
         stack: ex.stack,
       },

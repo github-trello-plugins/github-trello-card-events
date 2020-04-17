@@ -105,7 +105,7 @@ export class PullRequestMerged extends WorkflowBase {
       }
 
       result += '\nAdding milestone as trello card attachment... ';
-      await this.github.trello.addAttachmentToCard({
+      await this.trello.addAttachmentToCard({
         cardId: card.id,
         name: 'github-milestone',
         url: milestone.html_url,

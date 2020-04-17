@@ -1,6 +1,7 @@
-import type { GitHubWithTrelloApi } from '../types/GitHubWithTrelloApi';
+import type { Octokit } from '@octokit/rest';
+import { getGitHubClient } from '../services/githubService';
+import { TrelloService } from '../services/trelloService';
 import type { IBoard, ICard, IList } from '../types/trello';
-import { assertValidTrelloResponse, getExtendedGitHubClient } from '../services/githubService';
 import type { IWebhookPayload } from '../types/github';
 
 export interface IWorkflowBaseParams {
@@ -25,14 +26,17 @@ interface IRepo {
 }
 
 export abstract class WorkflowBase {
-  protected readonly github: GitHubWithTrelloApi;
+  protected readonly github: Octokit;
+
+  protected readonly trello: TrelloService;
 
   protected readonly payload: IWebhookPayload;
 
   protected readonly trelloBoardName: string;
 
   public constructor({ trelloBoardName, eventPayload }: IWorkflowBaseParams) {
-    this.github = getExtendedGitHubClient();
+    this.github = getGitHubClient();
+    this.trello = new TrelloService();
     this.trelloBoardName = trelloBoardName;
     this.payload = eventPayload;
   }
@@ -51,11 +55,9 @@ export abstract class WorkflowBase {
   public abstract execute(): Promise<string>;
 
   protected async getBoard(name: string): Promise<IBoard> {
-    const listBoardsResponse = await this.github.trello.listBoards();
+    const allBoards = await this.trello.listBoards();
 
-    assertValidTrelloResponse(listBoardsResponse, 'Unable to fetch boards');
-
-    const boards = listBoardsResponse.data.filter((board) => board.name === name);
+    const boards = allBoards.filter((board) => board.name === name);
     if (boards.length !== 1) {
       throw new Error(`Unable to find board: ${name}`);
     }
@@ -79,14 +81,10 @@ export abstract class WorkflowBase {
   }
 
   protected async getCard({ boardId, cardNumber }: IGetCardParams): Promise<ICard> {
-    const cardResponse = await this.github.trello.getCard({
+    const card = await this.trello.getCard({
       boardId,
       cardNumber,
     });
-
-    assertValidTrelloResponse(cardResponse, 'Unable to get card details');
-
-    const card = cardResponse.data;
 
     console.log(`Found card: ${card.id}`);
     return card;
@@ -99,15 +97,15 @@ export abstract class WorkflowBase {
 
     let result = `Moving card to list: ${list.name}`;
 
-    await this.github.trello.moveCard({
+    await this.trello.moveCard({
       cardId: card.id,
-      idList: list.id,
+      listId: list.id,
     });
 
     if (comment) {
       try {
         result += `\nAdding comment to card: ${comment}`;
-        await this.github.trello.addCommentToCard({
+        await this.trello.addCommentToCard({
           cardId: card.id,
           text: comment,
         });
