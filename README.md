@@ -18,6 +18,7 @@ TRELLO_KEY | Trello API key
 TRELLO_TOKEN | Trello API token
 GITHUB_USER_AGENT | Github API user agent
 GITHUB_TOKEN | Github API token
+GITHUB_SECRET | Secret used for validating requests
 PR_OPEN_DEST_LIST | Trello list for open pull requests pending review | Review
 PR_MERGE_DEST_LIST | Trello list for closed pull requests pending deployment | Deploy
 PR_CLOSE_DEST_LIST | Trello list for closed pull requests pending deployment | Doing

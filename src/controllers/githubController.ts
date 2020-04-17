@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { Request, Response } from 'express';
 import { postErrorMessage } from '../services/slackService';
 import { PullRequestMerged, PullRequestReady, WorkflowBase, WorkingOnCard } from '../workflows';
@@ -7,6 +8,22 @@ export const index = async (req: Request, res: Response) => {
     const { payload } = req.body;
     if (!payload) {
       throw new Error(`Unable to find payload in github event: ${JSON.stringify(req.body, null, 1)}`);
+    }
+
+    const secret = process.env.GITHUB_SECRET;
+    if (secret) {
+      const signature = req.header('X-Hub-Signature');
+      if (!signature) {
+        throw new Error('X-Hub-Signature was not specified');
+      }
+
+      const hmac = crypto.createHmac('sha1', secret);
+      const hexDigest = hmac.update(payload).digest('hex');
+      const digest = Buffer.from(`sha1=${hexDigest}`, 'utf8');
+      const checksum = Buffer.from(signature, 'utf8');
+      if (checksum.length !== digest.length || !crypto.timingSafeEqual(digest, checksum)) {
+        throw new Error('Unable to verify github request based on secret and signature');
+      }
     }
 
     const trelloBoardName = req.query.boardName as string | undefined;
