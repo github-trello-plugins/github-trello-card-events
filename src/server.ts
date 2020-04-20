@@ -8,6 +8,7 @@ import * as githubController from './controllers/githubController';
 
 const app = express();
 
+app.disable('x-powered-by');
 app.set('port', process.env.PORT || 1339);
 app.use(
   bodyParser.json({
