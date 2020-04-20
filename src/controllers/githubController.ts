@@ -49,7 +49,7 @@ export const index = async (req: Request, res: Response) => {
             workflow = new PullRequestMerged({
               eventPayload: payload,
               trelloBoardName,
-              destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Deploy',
+              destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Done',
               closeMilestone: req.query.closeMilestone !== 'false',
             });
           } else {
