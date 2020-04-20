@@ -19,7 +19,7 @@ export const index = async (req: Request, res: Response) => {
       }
 
       const hmac = crypto.createHmac('sha1', secret);
-      const hexDigest = hmac.update((req as IRequestWithRawBody).rawBody).digest('hex');
+      const hexDigest = hmac.update((req as IRequestWithRawBody).rawBody || Buffer.from(JSON.stringify(req.body))).digest('hex');
       const digest = Buffer.from(`sha1=${hexDigest}`, 'utf8');
       const checksum = Buffer.from(signature, 'utf8');
       if (checksum.length !== digest.length || !crypto.timingSafeEqual(digest, checksum)) {
