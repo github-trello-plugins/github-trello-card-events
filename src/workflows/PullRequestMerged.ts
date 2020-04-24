@@ -104,7 +104,7 @@ export class PullRequestMerged extends WorkflowBase {
         result += `\nCould not figure out how to name the release :(`;
       }
 
-      result += '\nAdding milestone as trello card attachment... ';
+      result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${card.id}... `;
       await this.trello.addAttachmentToCard({
         cardId: card.id,
         name: 'github-milestone',
