@@ -68,6 +68,7 @@ export class TrelloService {
     await request.post(`https://api.trello.com/1/cards/${cardId}/attachments`, {
       json: {
         key: this.key,
+        token: this.token,
         name,
         url,
       },
