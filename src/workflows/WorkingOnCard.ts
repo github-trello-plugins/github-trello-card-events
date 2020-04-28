@@ -22,9 +22,7 @@ export class WorkingOnCard extends WorkflowBase {
     const list = this.getList(board, this.destinationList);
 
     let comment: string | undefined;
-
-    // NOTE: https://developer.github.com/v3/git/refs/#create-a-reference
-    let branchName = this.payload.ref.trim().replace(/\W+/g, '-').toLowerCase();
+    let branchName: string;
     if (this.payload.pull_request) {
       branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
       if (this.payload.sender) {
@@ -32,6 +30,8 @@ export class WorkingOnCard extends WorkflowBase {
       } else {
         comment = `Pull request closed!`;
       }
+    } else {
+      branchName = this.payload.ref.trim().replace(/\W+/g, '-').toLowerCase();
     }
 
     const cardNumberMatches = /\d+/g.exec(branchName);
