@@ -12,7 +12,8 @@
     "lodash": "4.17.15",
     "moment-timezone": "0.5.28",
     "request": "2.88.2",
-    "request-promise": "4.2.5"
+    "request-promise": "4.2.5",
+    "snyk": "^1.316.2"
   },
   "devDependencies": {
     "@types/errorhandler": "1.5.0",
@@ -42,7 +43,9 @@
     "build": "tsc",
     "lint": "prettier --write *.json .eslintrc.js .prettierrc.js && eslint --fix --ext .ts src",
     "dev": "tsc && node dist/server.js",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
   },
   "lint-staged": {
     "./*.js": [
@@ -57,5 +60,6 @@
       "pre-commit": "lint-staged && npm run build && git add dist/"
     }
   },
-  "repository": "https://github.com/mpirik/github-trello-card-events.git"
+  "repository": "https://github.com/mpirik/github-trello-card-events.git",
+  "snyk": true
 }
