@@ -4,7 +4,7 @@ import { postErrorMessage } from '../services/slackService';
 import { PullRequestMerged, PullRequestReady, WorkflowBase, WorkingOnCard } from '../workflows';
 import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
 
-export const index = async (req: Request, res: Response) => {
+export async function index(req: Request, res: Response): Promise<Response> {
   try {
     const payload = req.body;
     if (!payload) {
@@ -100,4 +100,4 @@ export const index = async (req: Request, res: Response) => {
       },
     });
   }
-};
+}

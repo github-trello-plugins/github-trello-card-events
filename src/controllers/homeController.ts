@@ -2,11 +2,11 @@ import { Request, Response } from 'express';
 import type { IBoard } from '../types/trello';
 import { TrelloService } from '../services/trelloService';
 
-export const index = (_: Request, res: Response) => {
+export function index(_: Request, res: Response): Response {
   return res.send(':)');
-};
+}
 
-export const healthCheck = async (_: Request, res: Response) => {
+export async function healthCheck(_: Request, res: Response): Promise<Response> {
   try {
     const trello = new TrelloService();
     const boards = await trello.listBoards();
@@ -25,4 +25,4 @@ export const healthCheck = async (_: Request, res: Response) => {
       },
     });
   }
-};
+}

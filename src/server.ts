@@ -3,7 +3,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
 import * as homeController from './controllers/homeController';
-import * as deployController from './controllers/deployController';
 import * as githubController from './controllers/githubController';
 
 const app = express();
@@ -24,9 +23,6 @@ app.get('/', homeController.index);
 app.get('/healthcheck', homeController.healthCheck);
 // One entry point for all github events
 app.post('/github', githubController.index);
-
-// TODO: Remove this legacy url
-app.get('/deploy', deployController.index);
 
 app.listen(app.get('port'), () => {
   console.log('Listening at http://localhost:%s', app.get('port'));

@@ -1,15 +1,9 @@
-'use strict';
-
 module.exports = {
   root: true,
   plugins: ['jsdoc', 'promise', 'security', 'import', '@typescript-eslint', 'prettier'],
   extends: [
-    'eslint:recommended',
+    'eslint:recommended', //
     'airbnb-base',
-    'plugin:import/typescript',
-    'plugin:@typescript-eslint/eslint-recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
   ],
   env: {
     node: true,
@@ -170,12 +164,14 @@ module.exports = {
       extends: [
         'eslint:recommended', //
         'airbnb-base',
-        'plugin:@typescript-eslint/recommended',
         'plugin:import/typescript',
+        'plugin:@typescript-eslint/eslint-recommended',
+        'plugin:@typescript-eslint/recommended',
         'prettier',
         'prettier/@typescript-eslint',
       ],
       rules: {
+        camelcase: 'off',
         'class-methods-use-this': 'off',
         indent: 'off',
         'max-len': 'off',
@@ -197,14 +193,12 @@ module.exports = {
         '@typescript-eslint/array-type': ['error', { default: 'array' }],
         '@typescript-eslint/await-thenable': 'error',
         '@typescript-eslint/adjacent-overload-signatures': 'error',
-        '@typescript-eslint/class-name-casing': 'error',
         '@typescript-eslint/consistent-type-assertions': 'error',
         '@typescript-eslint/consistent-type-definitions': 'error',
         '@typescript-eslint/no-extraneous-class': 'error',
-        '@typescript-eslint/explicit-function-return-type': 'warn',
+        '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/explicit-member-accessibility': ['error'],
-        '@typescript-eslint/generic-type-naming': 'error',
-        '@typescript-eslint/interface-name-prefix': ['error', 'always'],
+        '@typescript-eslint/naming-convention': 'error',
         '@typescript-eslint/member-ordering': [
           'error',
           {

@@ -88,7 +88,7 @@ export class PullRequestReady extends WorkflowBase {
       await this.github.issues.update({
         owner: this.repo.owner,
         repo: this.repo.repo,
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         issue_number: this.payload.pull_request.number,
         body,
         labels: Array.from(labels),

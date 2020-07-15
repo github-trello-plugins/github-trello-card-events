@@ -77,7 +77,7 @@ export class PullRequestMerged extends WorkflowBase {
       await this.github.issues.update({
         owner: this.repo.owner,
         repo: this.repo.repo,
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         issue_number: this.payload.pull_request.number,
         milestone: milestone.number,
       });
@@ -94,7 +94,7 @@ export class PullRequestMerged extends WorkflowBase {
         await this.github.repos.createRelease({
           owner: this.repo.owner,
           repo: this.repo.repo,
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           tag_name: releaseName,
           name: releaseName,
           body: `* [${card.name}](${card.shortUrl})`,
@@ -125,7 +125,7 @@ export class PullRequestMerged extends WorkflowBase {
       repo: this.repo.repo,
       title,
       state: this.closeMilestone ? 'closed' : 'open',
-      // eslint-disable-next-line @typescript-eslint/camelcase
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       due_on: due,
     });
 
