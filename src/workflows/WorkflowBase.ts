@@ -63,7 +63,7 @@ export abstract class WorkflowBase {
       let defaultBoardName: string | undefined;
       for (const [nameOfBoard, cardPrefix] of boardsAndCardPrefixes) {
         if (cardPrefix) {
-          if (branchName.startsWith(nameOfBoard.toLowerCase())) {
+          if (branchName.startsWith(cardPrefix.toLowerCase())) {
             boardName = nameOfBoard;
             break;
           }
