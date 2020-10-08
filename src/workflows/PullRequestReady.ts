@@ -34,13 +34,14 @@ export class PullRequestReady extends WorkflowBase {
     let result = `Starting PullRequestReady workflow\n-----------------`;
     result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
 
-    const trelloBoardName = this.getBoardNameFromBranchName(branchName);
+    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
+    result += `\n${getBoardNameDetails}`;
 
     if (trelloBoardName) {
       result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
     } else {
       result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      return result;
+      throw new Error(result);
     }
 
     const board = await this.getBoard(trelloBoardName);
@@ -53,7 +54,7 @@ export class PullRequestReady extends WorkflowBase {
         cardNumber,
       });
     } catch (ex) {
-      ex.message = `${result} \n${ex.message}`;
+      ex.message = `${result}\n${ex.message}`;
       throw ex;
     }
 

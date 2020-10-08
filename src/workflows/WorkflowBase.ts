@@ -54,17 +54,20 @@ export abstract class WorkflowBase {
 
   public abstract execute(): Promise<string>;
 
-  protected getBoardNameFromBranchName(branchName: string): string | undefined {
+  protected getBoardNameFromBranchName(branchName: string): [string | undefined, string] {
+    let result = 'Unknown error trying to find board name from branch name';
     let boardName: string | undefined;
     const boardsAndCardPrefixes = Object.entries(this.boardsAndCardPrefixes);
     if (boardsAndCardPrefixes.length === 1) {
       [[boardName]] = boardsAndCardPrefixes;
+      result = `Using board: ${boardName}`;
     } else {
       let defaultBoardName: string | undefined;
       for (const [nameOfBoard, cardPrefix] of boardsAndCardPrefixes) {
         if (cardPrefix) {
           if (branchName.startsWith(cardPrefix.toLowerCase())) {
             boardName = nameOfBoard;
+            result = `Found board (${boardName}) based on branch prefix: ${branchName}`;
             break;
           }
         } else {
@@ -74,16 +77,18 @@ export abstract class WorkflowBase {
 
       if (defaultBoardName && !boardName) {
         boardName = defaultBoardName;
+        result = `Using default board (${boardName}) based on branch prefix: ${branchName}`;
       }
     }
 
-    return boardName;
+    return [boardName, result];
   }
 
   protected async getBoard(name: string): Promise<IBoard> {
     const allBoards = await this.trello.listBoards();
 
-    const boards = allBoards.filter((board) => board.name === name);
+    const lowerBoardName = name.toLowerCase();
+    const boards = allBoards.filter((board) => board.name.toLowerCase() === lowerBoardName);
     if (boards.length !== 1) {
       throw new Error(`Unable to find board: ${name}`);
     }

@@ -44,7 +44,8 @@ export class PullRequestMerged extends WorkflowBase {
     let result = `Starting PullRequestMerged workflow\n-----------------`;
     result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
 
-    const trelloBoardName = this.getBoardNameFromBranchName(branchName);
+    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
+    result += `\n${getBoardNameDetails}`;
 
     if (trelloBoardName) {
       result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
@@ -63,7 +64,7 @@ export class PullRequestMerged extends WorkflowBase {
         cardNumber,
       });
     } catch (ex) {
-      ex.message = `${result} \n${ex.message}`;
+      ex.message = `${result}\n${ex.message}`;
       throw ex;
     }
 
