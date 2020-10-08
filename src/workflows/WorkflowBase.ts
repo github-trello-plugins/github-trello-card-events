@@ -5,7 +5,7 @@ import type { IBoard, ICard, IList } from '../types/trello';
 import type { IWebhookPayload } from '../types/github';
 
 export interface IWorkflowBaseParams {
-  trelloBoardName: string;
+  boardsAndCardPrefixes: Record<string, string>;
   eventPayload: IWebhookPayload;
 }
 
@@ -32,12 +32,12 @@ export abstract class WorkflowBase {
 
   protected readonly payload: IWebhookPayload;
 
-  protected readonly trelloBoardName: string;
+  protected readonly boardsAndCardPrefixes: Record<string, string>;
 
-  public constructor({ trelloBoardName, eventPayload }: IWorkflowBaseParams) {
+  public constructor({ boardsAndCardPrefixes, eventPayload }: IWorkflowBaseParams) {
     this.github = getGitHubClient();
     this.trello = new TrelloService();
-    this.trelloBoardName = trelloBoardName;
+    this.boardsAndCardPrefixes = boardsAndCardPrefixes;
     this.payload = eventPayload;
   }
 
@@ -53,6 +53,32 @@ export abstract class WorkflowBase {
   }
 
   public abstract execute(): Promise<string>;
+
+  protected getBoardNameFromBranchName(branchName: string): string | undefined {
+    let boardName: string | undefined;
+    const boardsAndCardPrefixes = Object.entries(this.boardsAndCardPrefixes);
+    if (boardsAndCardPrefixes.length === 1) {
+      [[boardName]] = boardsAndCardPrefixes;
+    } else {
+      let defaultBoardName: string | undefined;
+      for (const [nameOfBoard, cardPrefix] of boardsAndCardPrefixes) {
+        if (cardPrefix) {
+          if (branchName.startsWith(nameOfBoard.toLowerCase())) {
+            boardName = nameOfBoard;
+            break;
+          }
+        } else {
+          defaultBoardName = nameOfBoard;
+        }
+      }
+
+      if (defaultBoardName && !boardName) {
+        boardName = defaultBoardName;
+      }
+    }
+
+    return boardName;
+  }
 
   protected async getBoard(name: string): Promise<IBoard> {
     const allBoards = await this.trello.listBoards();

@@ -27,8 +27,13 @@ export async function index(req: Request, res: Response): Promise<Response> {
       }
     }
 
+    let boardsAndCardPrefixes = req.query.boards as Record<string, string> | undefined;
     const trelloBoardName = req.query.boardName as string | undefined;
-    if (!trelloBoardName) {
+    if (trelloBoardName) {
+      boardsAndCardPrefixes = {
+        [trelloBoardName]: '',
+      };
+    } else if (!boardsAndCardPrefixes) {
       throw new Error('`boardName` query string is not defined.');
     }
 
@@ -48,7 +53,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
             // pull_request closed (merged)
             workflow = new PullRequestMerged({
               eventPayload: payload,
-              trelloBoardName,
+              boardsAndCardPrefixes,
               destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Done',
               closeMilestone: req.query.closeMilestone !== 'false',
             });
@@ -56,7 +61,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
             // pull_request closed (not merged)
             workflow = new WorkingOnCard({
               eventPayload: payload,
-              trelloBoardName,
+              boardsAndCardPrefixes,
               destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
             });
           }
@@ -64,7 +69,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
           // pull_request opened or reopened
           workflow = new PullRequestReady({
             eventPayload: payload,
-            trelloBoardName,
+            boardsAndCardPrefixes,
             destinationList: prOpenDestinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
           });
         }
@@ -72,7 +77,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
         // Branch created
         workflow = new WorkingOnCard({
           eventPayload: payload,
-          trelloBoardName,
+          boardsAndCardPrefixes,
           destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
         });
       }

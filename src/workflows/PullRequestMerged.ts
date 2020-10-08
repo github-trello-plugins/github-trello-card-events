@@ -28,9 +28,6 @@ export class PullRequestMerged extends WorkflowBase {
       throw new Error(`There were no pull_request details with payload: ${JSON.stringify(this.payload)}`);
     }
 
-    const board = await this.getBoard(this.trelloBoardName);
-    const list = this.getList(board, this.destinationList);
-
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
     const cardNumberMatches = /\d+/g.exec(branchName);
     let cardNumber: string | undefined;
@@ -45,6 +42,18 @@ export class PullRequestMerged extends WorkflowBase {
 
     let result = `Starting PullRequestMerged workflow\n-----------------`;
     result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
+
+    const trelloBoardName = this.getBoardNameFromBranchName(branchName);
+
+    if (trelloBoardName) {
+      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
+    } else {
+      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
+      return result;
+    }
+
+    const board = await this.getBoard(trelloBoardName);
+    const list = this.getList(board, this.destinationList);
 
     const card = await this.getCard({
       boardId: board.id,

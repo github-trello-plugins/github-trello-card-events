@@ -18,9 +18,6 @@ export class WorkingOnCard extends WorkflowBase {
       return 'Skipping tag event';
     }
 
-    const board = await this.getBoard(this.trelloBoardName);
-    const list = this.getList(board, this.destinationList);
-
     let comment: string | undefined;
     let branchName: string;
     if (this.payload.pull_request) {
@@ -47,6 +44,18 @@ export class WorkingOnCard extends WorkflowBase {
 
     let result = `Starting WorkingOnCard workflow\n-----------------`;
     result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
+
+    const trelloBoardName = this.getBoardNameFromBranchName(branchName);
+
+    if (trelloBoardName) {
+      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
+    } else {
+      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
+      return result;
+    }
+
+    const board = await this.getBoard(trelloBoardName);
+    const list = this.getList(board, this.destinationList);
 
     try {
       const card = await this.getCard({
