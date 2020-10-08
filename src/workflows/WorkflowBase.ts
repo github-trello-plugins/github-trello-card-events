@@ -55,29 +55,27 @@ export abstract class WorkflowBase {
   public abstract execute(): Promise<string>;
 
   protected getBoardNameFromBranchName(branchName: string): [string | undefined, string] {
-    let result = 'Unknown error trying to find board name from branch name';
+    let result = `Using board/branch mapping: ${JSON.stringify(this.boardsAndCardPrefixes)}`;
     let boardName: string | undefined;
     const boardsAndCardPrefixes = Object.entries(this.boardsAndCardPrefixes);
     if (boardsAndCardPrefixes.length === 1) {
       [[boardName]] = boardsAndCardPrefixes;
-      result = `Using board: ${boardName}`;
+      result += `\nUsing board: ${boardName}`;
     } else {
       let defaultBoardName: string | undefined;
       for (const [nameOfBoard, cardPrefix] of boardsAndCardPrefixes) {
-        if (cardPrefix) {
-          if (branchName.startsWith(cardPrefix.toLowerCase())) {
-            boardName = nameOfBoard;
-            result = `Found board (${boardName}) based on branch prefix: ${branchName}`;
-            break;
-          }
-        } else {
+        if (!cardPrefix || cardPrefix === 'default') {
           defaultBoardName = nameOfBoard;
+        } else if (branchName.startsWith(cardPrefix.toLowerCase())) {
+          boardName = nameOfBoard;
+          result += `\nFound board (${boardName}) based on branch prefix: ${branchName}`;
+          break;
         }
       }
 
       if (defaultBoardName && !boardName) {
         boardName = defaultBoardName;
-        result = `Using default board (${boardName}) based on branch prefix: ${branchName}`;
+        result += `\nUsing default board (${boardName}) based on branch prefix: ${branchName}`;
       }
     }
 
