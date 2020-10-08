@@ -1,4 +1,5 @@
 import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
+import { ICard } from '../types/trello';
 
 interface IPullRequestReadyParams extends IWorkflowBaseParams {
   destinationList: string;
@@ -45,10 +46,16 @@ export class PullRequestReady extends WorkflowBase {
     const board = await this.getBoard(trelloBoardName);
     const list = this.getList(board, this.destinationList);
 
-    const card = await this.getCard({
-      boardId: board.id,
-      cardNumber,
-    });
+    let card: ICard;
+    try {
+      card = await this.getCard({
+        boardId: board.id,
+        cardNumber,
+      });
+    } catch (ex) {
+      ex.message = `${result} \n${ex.message}`;
+      throw ex;
+    }
 
     // Update issue with card link and apply labels
     let body = this.payload.pull_request.body || '';

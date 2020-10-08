@@ -1,5 +1,6 @@
 import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
 import type { IIssuesCreateMilestoneResponse } from '../types/github';
+import { ICard } from '../types/trello';
 
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
@@ -49,16 +50,22 @@ export class PullRequestMerged extends WorkflowBase {
       result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
     } else {
       result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      return result;
+      throw new Error(result);
     }
 
     const board = await this.getBoard(trelloBoardName);
     const list = this.getList(board, this.destinationList);
 
-    const card = await this.getCard({
-      boardId: board.id,
-      cardNumber,
-    });
+    let card: ICard;
+    try {
+      card = await this.getCard({
+        boardId: board.id,
+        cardNumber,
+      });
+    } catch (ex) {
+      ex.message = `${result} \n${ex.message}`;
+      throw ex;
+    }
 
     let comment: string;
     if (this.payload.sender) {
