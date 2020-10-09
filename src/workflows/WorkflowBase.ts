@@ -5,7 +5,7 @@ import type { IBoard, ICard, IList } from '../types/trello';
 import type { IWebhookPayload } from '../types/github';
 
 export interface IWorkflowBaseParams {
-  boardsAndCardPrefixes: Record<string, string>;
+  boardsAndBranchNamePrefixes: Record<string, string>;
   eventPayload: IWebhookPayload;
 }
 
@@ -32,12 +32,12 @@ export abstract class WorkflowBase {
 
   protected readonly payload: IWebhookPayload;
 
-  protected readonly boardsAndCardPrefixes: Record<string, string>;
+  protected readonly boardsAndBranchNamePrefixes: Record<string, string>;
 
-  public constructor({ boardsAndCardPrefixes, eventPayload }: IWorkflowBaseParams) {
+  public constructor({ boardsAndBranchNamePrefixes, eventPayload }: IWorkflowBaseParams) {
     this.github = getGitHubClient();
     this.trello = new TrelloService();
-    this.boardsAndCardPrefixes = boardsAndCardPrefixes;
+    this.boardsAndBranchNamePrefixes = boardsAndBranchNamePrefixes;
     this.payload = eventPayload;
   }
 
@@ -55,18 +55,18 @@ export abstract class WorkflowBase {
   public abstract execute(): Promise<string>;
 
   protected getBoardNameFromBranchName(branchName: string): [string | undefined, string] {
-    let result = `Using board/branch mapping: ${JSON.stringify(this.boardsAndCardPrefixes)}`;
+    let result = `Using board/branch mapping: ${JSON.stringify(this.boardsAndBranchNamePrefixes)}`;
     let boardName: string | undefined;
-    const boardsAndCardPrefixes = Object.entries(this.boardsAndCardPrefixes);
-    if (boardsAndCardPrefixes.length === 1) {
-      [[boardName]] = boardsAndCardPrefixes;
+    const boardsAndBranchNamePrefixes = Object.entries(this.boardsAndBranchNamePrefixes);
+    if (boardsAndBranchNamePrefixes.length === 1) {
+      [[boardName]] = boardsAndBranchNamePrefixes;
       result += `\nUsing board: ${boardName}`;
     } else {
       let defaultBoardName: string | undefined;
-      for (const [nameOfBoard, cardPrefix] of boardsAndCardPrefixes) {
-        if (!cardPrefix || cardPrefix === 'default') {
+      for (const [nameOfBoard, branchNamePrefix] of boardsAndBranchNamePrefixes) {
+        if (!branchNamePrefix || branchNamePrefix === 'default') {
           defaultBoardName = nameOfBoard;
-        } else if (branchName.startsWith(cardPrefix.toLowerCase())) {
+        } else if (branchName.startsWith(branchNamePrefix.toLowerCase())) {
           boardName = nameOfBoard;
           result += `\nFound board (${boardName}) based on branch prefix: ${branchName}`;
           break;

@@ -28,7 +28,7 @@ PR_CLOSE_DEST_LIST | Trello list for closed pull requests pending deployment | D
 Name | Description | Required
 ---- | ----------- | --------
 boardName | Trello board name | Yes - if boards is not defined
-boards | Boards and card prefixes. Key is board name, value is card prefix. Empty prefix represents the default board | Yes - if boardName is not defined
+boards | Boards and card prefixes. Key is board name, value is branch prefix. A branch prefix of `default` represents the board to use if the branch prefix does not match any othesr | Yes - if boardName is not defined
 pr_merge_dest | Destination trello list name for PR merge events | No
 pr_close_dest | Destination trello list name for PR close events | No
 pr_open_dest | Destination trello list name for PR open events | No
@@ -37,4 +37,4 @@ closeMilestone | Immediately close created milestone when PR is merged | No
 ## Example
 
 * https://yoursite.com/github?boardName=foo
-* https://yoursite.com/github?boards[foo]=f-&boards[bar]=bar-&boards[default]=
+* https://yoursite.com/github?boards[foo]=f-&boards[bar]=bar-&boards[my-default-board]=default
