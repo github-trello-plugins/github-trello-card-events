@@ -6,7 +6,7 @@ jobs:
     shell: /bin/bash --login
 
     docker:
-      - image: circleci/node:10
+      - image: circleci/node:12
 
     steps:
       # Machine Setup
@@ -19,7 +19,7 @@ jobs:
             # This branch if available
             - v1-dep-{{ .Branch }}-
             # Default branch if not
-            - v1-dep-master-
+            - v1-dep-main-
             # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
             - v1-dep-
       # Delete cached node_modules folder if node version has changed
@@ -46,7 +46,7 @@ jobs:
     shell: /bin/bash --login
 
     docker:
-      - image: circleci/node:10
+      - image: circleci/node:12
 
     steps:
       - checkout
@@ -59,7 +59,7 @@ jobs:
           command: git remote add dokku dokku@dokku.mpirik.com:github-trello-card-events
       - run:
           name: Deploy
-          command: git push -f dokku master
+          command: git push -f dokku main
 
 workflows:
   version: 2
@@ -70,6 +70,6 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
           requires:
             - build
