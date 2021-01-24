@@ -6,7 +6,7 @@ jobs:
     shell: /bin/bash --login
 
     docker:
-      - image: circleci/node:12
+      - image: circleci/node:14
 
     steps:
       # Machine Setup
@@ -46,7 +46,7 @@ jobs:
     shell: /bin/bash --login
 
     docker:
-      - image: circleci/node:12
+      - image: circleci/node:14
 
     steps:
       - checkout
