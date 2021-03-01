@@ -196,6 +196,7 @@ module.exports = {
         '@typescript-eslint/adjacent-overload-signatures': 'error',
         '@typescript-eslint/consistent-type-assertions': 'error',
         '@typescript-eslint/consistent-type-definitions': 'error',
+        '@typescript-eslint/consistent-indexed-object-style': 'error',
         '@typescript-eslint/no-extraneous-class': 'error',
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/explicit-member-accessibility': ['error'],
