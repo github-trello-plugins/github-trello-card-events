@@ -20,8 +20,10 @@ app.use(errorHandler());
 
 // Hook up routes
 app.get('/', homeController.index);
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.get('/healthcheck', homeController.healthCheck);
 // One entry point for all github events
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 app.post('/github', githubController.index);
 
 app.listen(app.get('port'), () => {
