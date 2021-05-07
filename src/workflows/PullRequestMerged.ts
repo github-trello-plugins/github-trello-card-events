@@ -110,7 +110,7 @@ export class PullRequestMerged extends WorkflowBase {
 
       if (this.createRelease) {
         console.log('Determining release name');
-        const releaseNameMatches = now.match(/^([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):([0-9]+)/);
+        const releaseNameMatches = /^([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):([0-9]+)/.exec(now);
         if (releaseNameMatches) {
           let releaseName = '';
           for (let i = 1; i < releaseNameMatches.length; i += 1) {
