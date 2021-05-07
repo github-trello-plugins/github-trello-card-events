@@ -1,6 +1,9 @@
+import type { components as githubTypes } from '@octokit/openapi-types';
+
 import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
-import type { IIssuesCreateMilestoneResponse } from '../types/github';
 import { ICard } from '../types/trello';
+
+type IssuesCreateMilestoneResponse = githubTypes['schemas']['milestone'];
 
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
@@ -136,11 +139,12 @@ export class PullRequestMerged extends WorkflowBase {
     return result;
   }
 
-  private async createMilestone({ due, title = `Deploy ${due}` }: ICreateMilestoneParams): Promise<IIssuesCreateMilestoneResponse> {
+  private async createMilestone({ due, title = `Deploy ${due}`, description }: ICreateMilestoneParams): Promise<IssuesCreateMilestoneResponse> {
     const milestoneResponse = await this.github.issues.createMilestone({
       owner: this.repo.owner,
       repo: this.repo.repo,
       title,
+      description,
       state: this.closeMilestone ? 'closed' : 'open',
       // eslint-disable-next-line @typescript-eslint/naming-convention
       due_on: due,
