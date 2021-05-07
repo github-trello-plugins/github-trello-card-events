@@ -33,7 +33,7 @@ jobs:
             fi && echo $node_version > node_modules/.node-version
       - run:
           name: Install dependencies
-          command: npm install
+          command: npm ci
       # Save dependency cache
       - save_cache:
           key: v1-dep-{{ .Branch }}-{{ epoch }}
