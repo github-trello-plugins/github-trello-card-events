@@ -8,15 +8,19 @@ type IssuesCreateMilestoneResponse = githubTypes['schemas']['milestone'];
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
   closeMilestone: boolean;
+  createRelease: boolean;
 }
 
 interface ICreateMilestoneParams {
   due: string;
   title?: string;
+  description?: string;
 }
 
 export class PullRequestMerged extends WorkflowBase {
   public destinationList: string;
+
+  public createRelease: boolean;
 
   public closeMilestone: boolean;
 
@@ -24,6 +28,7 @@ export class PullRequestMerged extends WorkflowBase {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.createRelease = params.createRelease;
     this.closeMilestone = params.closeMilestone;
   }
 
@@ -90,6 +95,7 @@ export class PullRequestMerged extends WorkflowBase {
       const now = new Date().toISOString();
       const milestone = await this.createMilestone({
         due: now,
+        description: `* [${card.name}](${card.shortUrl})`,
       });
 
       result += `\nAssigning PR to milestone: ${milestone.number}`;
@@ -102,26 +108,38 @@ export class PullRequestMerged extends WorkflowBase {
         milestone: milestone.number,
       });
 
-      console.log('Determining release name');
-      const releaseNameMatches = now.match(/^([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):([0-9]+)/);
-      if (releaseNameMatches) {
-        let releaseName = '';
-        for (let i = 1; i < releaseNameMatches.length; i += 1) {
-          releaseName += releaseNameMatches[i];
-        }
+      if (this.createRelease) {
+        console.log('Determining release name');
+        const releaseNameMatches = now.match(/^([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):([0-9]+)/);
+        if (releaseNameMatches) {
+          let releaseName = '';
+          for (let i = 1; i < releaseNameMatches.length; i += 1) {
+            releaseName += releaseNameMatches[i];
+          }
 
-        result += `\nCreating github release: ${releaseName}... `;
-        await this.github.repos.createRelease({
-          owner: this.repo.owner,
-          repo: this.repo.repo,
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          tag_name: releaseName,
-          name: releaseName,
-          body: `* [${card.name}](${card.shortUrl})`,
-        });
-        result += `Done!`;
-      } else {
-        result += `\nCould not figure out how to name the release :(`;
+          result += `\nCreating github release: ${releaseName}... `;
+
+          let releaseMessage = '## Trello Card(s)';
+          releaseMessage += `\n* [${card.name}](${card.shortUrl})`;
+
+          releaseMessage += '\n\n## Pull Request(s)';
+          releaseMessage += `\n* [${this.payload.pull_request.title}](${this.payload.pull_request.html_url})`;
+
+          releaseMessage += '\n\n## Milestone(s)';
+          releaseMessage += `\n* [${milestone.title}](${milestone.html_url})`;
+
+          await this.github.repos.createRelease({
+            owner: this.repo.owner,
+            repo: this.repo.repo,
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            tag_name: releaseName,
+            name: releaseName,
+            body: releaseMessage,
+          });
+          result += `Done!`;
+        } else {
+          result += `\nCould not figure out how to name the release :(`;
+        }
       }
 
       result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${card.id}... `;

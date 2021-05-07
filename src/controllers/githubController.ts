@@ -56,6 +56,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
               boardsAndBranchNamePrefixes,
               destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Done',
               closeMilestone: req.query.closeMilestone !== 'false',
+              createRelease: req.query.createRelease !== 'false',
             });
           } else {
             // pull_request closed (not merged)
