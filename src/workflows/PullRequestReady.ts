@@ -71,7 +71,9 @@ export class PullRequestReady extends WorkflowBase {
 
     const labels = new Set<string>();
     for (const label of this.payload.pull_request.labels || []) {
-      labels.add(label.name);
+      if (label.name) {
+        labels.add(label.name);
+      }
     }
 
     try {
