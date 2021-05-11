@@ -3,7 +3,7 @@ import type { IBoard } from '../types/trello';
 import { TrelloService } from '../services/trelloService';
 
 export function index(_: Request, res: Response): Response {
-  return res.send(':)');
+  return res.send(`:)<br />${process.env.GIT_REV || ''}`);
 }
 
 export async function healthCheck(_: Request, res: Response): Promise<Response> {
