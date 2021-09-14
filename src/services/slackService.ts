@@ -1,4 +1,4 @@
-import * as request from 'request-promise';
+import axios from 'axios';
 
 interface IPostMessageBaseParams {
   webhookUrl?: string;
@@ -10,7 +10,7 @@ export interface IPostMessageMarkdownParams extends IPostMessageBaseParams {
   isText?: false;
   title?: string;
   message: string;
-  borderColor?: 'good' | 'danger';
+  borderColor?: 'danger' | 'good';
   username?: string;
 }
 
@@ -66,8 +66,7 @@ export async function postMessage(args: IPostMessageMarkdownParams | IPostMessag
   }
 
   try {
-    await request.post(uri, {
-      json: payload,
+    await axios.post(uri, payload, {
       timeout: 10000,
     });
   } catch (ex) {

@@ -1,8 +1,9 @@
 import type { Octokit } from '@octokit/rest';
+
 import { getGitHubClient } from '../services/githubService';
 import { TrelloService } from '../services/trelloService';
-import type { IBoard, ICard, IList } from '../types/trello';
 import type { IWebhookPayload } from '../types/github';
+import type { IBoard, ICard, IList } from '../types/trello';
 
 export interface IWorkflowBaseParams {
   boardsAndBranchNamePrefixes: Record<string, string>;
@@ -139,8 +140,11 @@ export abstract class WorkflowBase {
           text: comment,
         });
       } catch (ex) {
+        if (ex instanceof Error && ex.stack) {
+          result += `\n${ex.stack}`;
+        }
+
         // Log, but ignore since this is a bonus and not the primary action
-        result += `\n${ex.stack}`;
         console.error(ex);
       }
     }

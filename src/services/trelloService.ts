@@ -1,6 +1,8 @@
 import { URL } from 'url';
-import * as request from 'request-promise';
-import { IBoard, ICard } from '../types/trello';
+
+import axios from 'axios';
+
+import type { IBoard, ICard, IError } from '../types/trello';
 
 export class TrelloService {
   protected readonly key: string;
@@ -26,16 +28,16 @@ export class TrelloService {
     getBoardUrl.searchParams.set('key', this.key);
     getBoardUrl.searchParams.set('token', this.token);
 
-    const boards = await request.get(getBoardUrl.href, {
-      json: true,
+    const boardsResponse = await axios.get<IBoard[] | IError>(getBoardUrl.href, {
       timeout: 10000,
     });
 
-    if (boards.error) {
-      throw new Error(`Error fetching trello boards: ${boards.error}\n${boards.message}`);
+    const errorResponse = boardsResponse.data as IError;
+    if (errorResponse.error) {
+      throw new Error(`Error fetching trello board: ${errorResponse.error}\n${errorResponse.message}`);
     }
 
-    return boards;
+    return boardsResponse.data as IBoard[];
   }
 
   public async getCard({ boardId, cardNumber }: { boardId: string; cardNumber: string }): Promise<ICard> {
@@ -43,16 +45,16 @@ export class TrelloService {
     getBoardUrl.searchParams.set('key', this.key);
     getBoardUrl.searchParams.set('token', this.token);
 
-    const card = await request.get(getBoardUrl.href, {
-      json: true,
+    const cardResponse = await axios.get<ICard | IError>(getBoardUrl.href, {
       timeout: 10000,
     });
 
-    if (card.error) {
-      throw new Error(`Error fetching trello card ${cardNumber}: ${card.error}\n${card.message}`);
+    const errorResponse = cardResponse.data as IError;
+    if (errorResponse.error) {
+      throw new Error(`Error fetching trello card: ${errorResponse.error}\n${errorResponse.message}`);
     }
 
-    return card;
+    return cardResponse.data as ICard;
   }
 
   public async moveCard({ cardId, listId }: { cardId: string; listId: string }): Promise<void> {
@@ -61,27 +63,23 @@ export class TrelloService {
     moveCardUrl.searchParams.set('token', this.token);
     moveCardUrl.searchParams.set('idList', listId);
 
-    await request.put(moveCardUrl.href);
+    await axios.put(moveCardUrl.href);
   }
 
   public async addAttachmentToCard({ cardId, name, url }: { cardId: string; name: string; url: string }): Promise<void> {
-    await request.post(`https://api.trello.com/1/cards/${cardId}/attachments`, {
-      json: {
-        key: this.key,
-        token: this.token,
-        name,
-        url,
-      },
+    await axios.post(`https://api.trello.com/1/cards/${cardId}/attachments`, {
+      key: this.key,
+      token: this.token,
+      name,
+      url,
     });
   }
 
   public async addCommentToCard({ cardId, text }: { cardId: string; text: string }): Promise<void> {
-    await request.post(`https://api.trello.com/1/cards/${cardId}/actions/comments`, {
-      formData: {
-        key: this.key,
-        token: this.token,
-        text,
-      },
+    await axios.post(`https://api.trello.com/1/cards/${cardId}/actions/comments`, {
+      key: this.key,
+      token: this.token,
+      text,
     });
   }
 }

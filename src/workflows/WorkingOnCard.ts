@@ -1,4 +1,5 @@
-import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
+import type { IWorkflowBaseParams } from './WorkflowBase';
+import { WorkflowBase } from './WorkflowBase';
 
 interface IWorkingOnCardParams extends IWorkflowBaseParams {
   destinationList: string;
@@ -72,7 +73,12 @@ export class WorkingOnCard extends WorkflowBase {
 
       result += `\n${moveCardResult}`;
     } catch (ex) {
-      result += `\n${ex.stack}`;
+      if (ex instanceof Error) {
+        ex.message = `${result}\n${ex.message}`;
+      } else {
+        (ex as Error).message = result;
+      }
+
       throw ex;
     }
 

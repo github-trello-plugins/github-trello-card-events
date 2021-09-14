@@ -1,6 +1,6 @@
 import type { components as githubTypes } from '@octokit/openapi-types';
 
-import { IPayloadRepository } from './IPayloadRepository';
+import type { IPayloadRepository } from './IPayloadRepository';
 
 export interface IWebhookPayload {
   ref: string;

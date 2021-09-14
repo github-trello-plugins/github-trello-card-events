@@ -1,9 +1,10 @@
+import bodyParser from 'body-parser';
 import errorHandler from 'errorhandler';
 import express from 'express';
-import bodyParser from 'body-parser';
-import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
-import * as homeController from './controllers/homeController';
+
 import * as githubController from './controllers/githubController';
+import * as homeController from './controllers/homeController';
+import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
 
 const app = express();
 

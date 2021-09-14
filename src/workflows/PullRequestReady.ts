@@ -1,5 +1,7 @@
-import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
-import { ICard } from '../types/trello';
+import type { ICard } from '../types/trello';
+
+import type { IWorkflowBaseParams } from './WorkflowBase';
+import { WorkflowBase } from './WorkflowBase';
 
 interface IPullRequestReadyParams extends IWorkflowBaseParams {
   destinationList: string;
@@ -48,13 +50,19 @@ export class PullRequestReady extends WorkflowBase {
     const list = this.getList(board, this.destinationList);
 
     let card: ICard;
+
     try {
       card = await this.getCard({
         boardId: board.id,
         cardNumber,
       });
     } catch (ex) {
-      ex.message = `${result}\n${ex.message}`;
+      if (ex instanceof Error) {
+        ex.message = `${result}\n${ex.message}`;
+      } else {
+        (ex as Error).message = result;
+      }
+
       throw ex;
     }
 
@@ -98,7 +106,10 @@ export class PullRequestReady extends WorkflowBase {
       }
     } catch (ex) {
       // Not critical if assigning labels fails
-      result += `\n${ex.stack}`;
+      if (ex instanceof Error && ex.stack) {
+        result += `\n${ex.stack}`;
+      }
+
       console.error(ex);
     }
 
@@ -115,7 +126,10 @@ export class PullRequestReady extends WorkflowBase {
       result += 'Done!';
     } catch (ex) {
       // Not critical if updating github PR fails
-      result += `\n${ex.stack}`;
+      if (ex instanceof Error && ex.stack) {
+        result += `\n${ex.stack}`;
+      }
+
       console.error(ex);
     }
 

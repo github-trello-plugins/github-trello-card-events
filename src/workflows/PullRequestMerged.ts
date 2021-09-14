@@ -1,7 +1,9 @@
 import type { components as githubTypes } from '@octokit/openapi-types';
 
-import { IWorkflowBaseParams, WorkflowBase } from './WorkflowBase';
-import { ICard } from '../types/trello';
+import type { ICard } from '../types/trello';
+
+import type { IWorkflowBaseParams } from './WorkflowBase';
+import { WorkflowBase } from './WorkflowBase';
 
 type IssuesCreateMilestoneResponse = githubTypes['schemas']['milestone'];
 
@@ -66,13 +68,19 @@ export class PullRequestMerged extends WorkflowBase {
     const list = this.getList(board, this.destinationList);
 
     let card: ICard;
+
     try {
       card = await this.getCard({
         boardId: board.id,
         cardNumber,
       });
     } catch (ex) {
-      ex.message = `${result}\n${ex.message}`;
+      if (ex instanceof Error) {
+        ex.message = `${result}\n${ex.message}`;
+      } else {
+        (ex as Error).message = result;
+      }
+
       throw ex;
     }
 
@@ -150,7 +158,10 @@ export class PullRequestMerged extends WorkflowBase {
       });
       result += 'Done!';
     } catch (ex) {
-      result += `\n${ex.stack}`;
+      if (ex instanceof Error && ex.stack) {
+        result += `\n${ex.stack}`;
+      }
+
       console.error(ex);
     }
 

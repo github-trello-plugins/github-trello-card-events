@@ -1,8 +1,11 @@
 import * as crypto from 'crypto';
-import { Request, Response } from 'express';
+
+import type { Request, Response } from 'express';
+
 import { postErrorMessage } from '../services/slackService';
-import { PullRequestMerged, PullRequestReady, WorkflowBase, WorkingOnCard } from '../workflows';
 import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
+import type { WorkflowBase } from '../workflows';
+import { PullRequestMerged, PullRequestReady, WorkingOnCard } from '../workflows';
 
 export async function index(req: Request, res: Response): Promise<Response> {
   try {
@@ -94,16 +97,13 @@ export async function index(req: Request, res: Response): Promise<Response> {
   } catch (ex) {
     if (process.env.SLACK_ERROR_WEBHOOK) {
       await postErrorMessage({
-        error: ex,
+        error: ex as Error,
       });
     }
 
     return res.status(500).json({
       ok: false,
-      err: {
-        message: ex.message,
-        stack: ex.stack,
-      },
+      err: ex,
     });
   }
 }

@@ -1,4 +1,4 @@
-import { ILabel } from './ILabel';
+import type { ILabel } from './ILabel';
 
 export interface ICard {
   id: string;
