@@ -9,7 +9,7 @@ export function getGitHubClient(): Octokit {
   }
 
   return new Octokit({
-    auth: `token ${token}`,
+    auth: token,
     userAgent,
     log: console,
   });
