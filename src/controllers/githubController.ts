@@ -3,13 +3,14 @@ import * as crypto from 'crypto';
 import type { Request, Response } from 'express';
 
 import { postErrorMessage } from '../services/slackService';
+import type { IWebhookPayload } from '../types/github';
 import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
 import type { WorkflowBase } from '../workflows';
 import { PullRequestMerged, PullRequestReady, WorkingOnCard } from '../workflows';
 
 export async function index(req: Request, res: Response): Promise<Response> {
   try {
-    const payload = req.body;
+    const payload: IWebhookPayload & { zen?: string } = req.body;
     if (!payload) {
       throw new Error(`Unable to find payload in github event: ${JSON.stringify(req, null, 1)}`);
     }
@@ -44,9 +45,9 @@ export async function index(req: Request, res: Response): Promise<Response> {
     const prCloseDestinationList = req.query.pr_close_dest as string | undefined;
     const prOpenDestinationList = req.query.pr_open_dest as string | undefined;
 
-    let workflow: WorkflowBase;
+    let workflow: WorkflowBase | undefined;
 
-    let result: string;
+    let result = `Skipping ${payload.action || 'unknown'} payload action.`;
     if (payload.zen) {
       result = 'Feeling very zen-like!';
     } else {
@@ -69,7 +70,7 @@ export async function index(req: Request, res: Response): Promise<Response> {
               destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
             });
           }
-        } else {
+        } else if (['opened', 'reopened'].includes(payload.action || '')) {
           // pull_request opened or reopened
           workflow = new PullRequestReady({
             eventPayload: payload,
@@ -86,7 +87,9 @@ export async function index(req: Request, res: Response): Promise<Response> {
         });
       }
 
-      result = await workflow.execute();
+      if (workflow) {
+        result = await workflow.execute();
+      }
     }
 
     return res.json({
