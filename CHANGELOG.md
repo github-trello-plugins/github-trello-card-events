@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.6 - 2022-08-17
+
+- Update npms
+- Prevent moving cards back to OpenDestinationList for unrelated pull_request events (pull_request.milestoned & pull_request.synchronize) 
+
 ## 1.1.5 - 2022-08-03
 
 - Update npms
