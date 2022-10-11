@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.9 - 2022-10-11
+
+- Update npms
+- Update type used for milestone creation response
+
 ## 1.1.8 - 2022-08-30
 
 - Update npms

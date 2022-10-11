@@ -1,11 +1,11 @@
-import type { components as githubTypes } from '@octokit/openapi-types';
+import type { Endpoints } from '@octokit/types';
 
 import type { ICard } from '../types/trello';
 
 import type { IWorkflowBaseParams } from './WorkflowBase';
 import { WorkflowBase } from './WorkflowBase';
 
-type IssuesCreateMilestoneResponse = githubTypes['schemas']['milestone'];
+type IssuesCreateMilestoneResponse = Endpoints['POST /repos/{owner}/{repo}/milestones']['response']['data'];
 
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
