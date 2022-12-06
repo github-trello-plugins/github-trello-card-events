@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11 - 2022-12-06
+
+- Remove @types/moment-timezone
+
 ## 1.1.10 - 2022-12-06
 
 - Update npms
