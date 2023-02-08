@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+declare const process: {
+  env: {
+    SLACK_ERROR_WEBHOOK_URL: string | undefined;
+    SLACK_WEBHOOK_URL: string | undefined;
+  };
+};
+
 interface IPostMessageBaseParams {
   webhookUrl?: string;
   icon?: string;

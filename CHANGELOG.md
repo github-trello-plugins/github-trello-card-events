@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.12 - 2023-02-08
+
+- Update npms
+- Enable more strict Typescript configuration
+
 ## 1.1.11 - 2022-12-06
 
 - Remove @types/moment-timezone

@@ -4,6 +4,13 @@ import axios from 'axios';
 
 import type { IBoard, ICard, IError } from '../types/trello';
 
+declare const process: {
+  env: {
+    TRELLO_KEY: string | undefined;
+    TRELLO_TOKEN: string | undefined;
+  };
+};
+
 export class TrelloService {
   protected readonly key: string;
 

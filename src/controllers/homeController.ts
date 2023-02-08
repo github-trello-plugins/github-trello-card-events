@@ -3,6 +3,12 @@ import type { Request, Response } from 'express';
 import { TrelloService } from '../services/trelloService';
 import type { IBoard } from '../types/trello';
 
+declare const process: {
+  env: {
+    GIT_REV: string | undefined;
+  };
+};
+
 export function index(_: Request, res: Response): Response {
   return res.send(`:)<br />${process.env.GIT_REV || ''}`);
 }

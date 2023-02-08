@@ -8,9 +8,30 @@ import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
 import type { WorkflowBase } from '../workflows';
 import { PullRequestMerged, PullRequestReady, WorkingOnCard } from '../workflows';
 
-export async function index(req: Request, res: Response): Promise<Response> {
+declare const process: {
+  env: {
+    GITHUB_SECRET: string | undefined;
+    PR_MERGE_DEST_LIST: string | undefined;
+    PR_CLOSE_DEST_LIST: string | undefined;
+    PR_OPEN_DEST_LIST: string | undefined;
+    SLACK_ERROR_WEBHOOK: string | undefined;
+  };
+};
+
+type IndexRequestBody = IWebhookPayload & { zen?: string };
+interface IndexRequestQuery {
+  boards?: Record<string, string>;
+  boardName?: string;
+  pr_merge_dest?: string;
+  pr_close_dest?: string;
+  pr_open_dest?: string;
+  closeMilestone?: string;
+  createRelease?: string;
+}
+
+export async function index(req: Request<unknown, unknown, IndexRequestBody, IndexRequestQuery>, res: Response): Promise<Response> {
   try {
-    const payload: IWebhookPayload & { zen?: string } = req.body;
+    const payload = req.body;
     if (!payload) {
       throw new Error(`Unable to find payload in github event: ${JSON.stringify(req, null, 1)}`);
     }
@@ -31,8 +52,8 @@ export async function index(req: Request, res: Response): Promise<Response> {
       }
     }
 
-    let boardsAndBranchNamePrefixes = req.query.boards as Record<string, string> | undefined;
-    const trelloBoardName = req.query.boardName as string | undefined;
+    let boardsAndBranchNamePrefixes = req.query.boards;
+    const trelloBoardName = req.query.boardName;
     if (trelloBoardName) {
       boardsAndBranchNamePrefixes = {
         [trelloBoardName]: '',
@@ -41,9 +62,9 @@ export async function index(req: Request, res: Response): Promise<Response> {
       throw new Error('`boardName` query string is not defined.');
     }
 
-    const prMergeDestinationList = req.query.pr_merge_dest as string | undefined;
-    const prCloseDestinationList = req.query.pr_close_dest as string | undefined;
-    const prOpenDestinationList = req.query.pr_open_dest as string | undefined;
+    const prMergeDestinationList = req.query.pr_merge_dest;
+    const prCloseDestinationList = req.query.pr_close_dest;
+    const prOpenDestinationList = req.query.pr_open_dest;
 
     let workflow: WorkflowBase | undefined;
 

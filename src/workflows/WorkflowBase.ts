@@ -60,8 +60,12 @@ export abstract class WorkflowBase {
     let boardName: string | undefined;
     const boardsAndBranchNamePrefixes = Object.entries(this.boardsAndBranchNamePrefixes);
     if (boardsAndBranchNamePrefixes.length === 1) {
-      [[boardName]] = boardsAndBranchNamePrefixes;
-      result += `\nUsing board: ${boardName}`;
+      const [boardNames] = boardsAndBranchNamePrefixes;
+      if (boardNames) {
+        [boardName] = boardNames;
+      }
+
+      result += `\nUsing board: ${boardName ?? '--Unknown--'}`;
     } else {
       let defaultBoardName: string | undefined;
       for (const [nameOfBoard, branchNamePrefix] of boardsAndBranchNamePrefixes) {
@@ -93,6 +97,10 @@ export abstract class WorkflowBase {
     }
 
     const board = boards[0];
+    if (!board) {
+      throw new Error(`Unable to find board: ${name}`);
+    }
+
     console.log(`Found board: ${board.id}`);
 
     return board;
@@ -105,6 +113,10 @@ export abstract class WorkflowBase {
     }
 
     const list = lists[0];
+    if (!list) {
+      throw new Error(`Unable to find list: ${listName}`);
+    }
+
     console.log(`Found list: ${list.id} - ${list.name}`);
 
     return list;

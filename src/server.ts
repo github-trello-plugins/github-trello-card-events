@@ -6,6 +6,12 @@ import * as githubController from './controllers/githubController';
 import * as homeController from './controllers/homeController';
 import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
 
+declare const process: {
+  env: {
+    PORT?: string;
+  };
+};
+
 const app = express();
 
 app.disable('x-powered-by');
