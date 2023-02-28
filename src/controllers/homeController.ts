@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import _ from 'lodash';
 
 import { TrelloService } from '../services/trelloService';
 import type { IBoard } from '../types/trello';
@@ -6,11 +7,14 @@ import type { IBoard } from '../types/trello';
 declare const process: {
   env: {
     GIT_REV: string | undefined;
+    FLY_REGION: string | undefined;
+    FLY_ALLOC_ID: string | undefined;
   };
 };
 
-export function index(_: Request, res: Response): Response {
-  return res.send(`:)<br />${process.env.GIT_REV || ''}`);
+export function index(_req: Request, res: Response): Response {
+  const flyInfo = _.trim(`${process.env.FLY_REGION || ''} - ${process.env.FLY_ALLOC_ID || ''}`, '- ');
+  return res.send(`:)<br />${process.env.GIT_REV || ''}<br />${flyInfo}`);
 }
 
 export async function healthCheck(_: Request, res: Response): Promise<Response> {
