@@ -17,7 +17,7 @@ export function index(_req: Request, res: Response): Response {
   return res.send(`:)<br />${process.env.GIT_REV || ''}<br />${flyInfo}`);
 }
 
-export async function healthCheck(_: Request, res: Response): Promise<Response> {
+export async function healthCheck(_req: Request, res: Response): Promise<Response> {
   try {
     const trello = new TrelloService();
     const boards = await trello.listBoards();
