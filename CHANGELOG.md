@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0 - 2023-05-24
+
+- Update npms
+- Remove Node.js v14 and add Node.js v20
+
 ## 1.1.13 - 2023-04-17
 
 - Update npms
