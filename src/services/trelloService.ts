@@ -17,12 +17,12 @@ export class TrelloService {
   protected readonly token: string;
 
   public constructor() {
-    this.key = process.env.TRELLO_KEY || '';
+    this.key = process.env.TRELLO_KEY ?? '';
     if (!this.key) {
       throw new Error('TRELLO_KEY not defined.');
     }
 
-    this.token = process.env.TRELLO_TOKEN || '';
+    this.token = process.env.TRELLO_TOKEN ?? '';
     if (!this.token) {
       throw new Error('TRELLO_TOKEN not defined.');
     }

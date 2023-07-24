@@ -24,7 +24,7 @@ export class PullRequestReady extends WorkflowBase {
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
     const cardNumberMatches = /\d+/g.exec(branchName);
     let cardNumber;
-    if (cardNumberMatches && cardNumberMatches.length) {
+    if (cardNumberMatches?.length) {
       [cardNumber] = cardNumberMatches;
     }
 
@@ -67,7 +67,7 @@ export class PullRequestReady extends WorkflowBase {
     }
 
     // Update issue with card link and apply labels
-    let body = this.payload.pull_request.body || '';
+    let body = this.payload.pull_request.body ?? '';
     if (!body.includes(card.shortUrl)) {
       if (body) {
         body += '\n\n';
@@ -78,7 +78,8 @@ export class PullRequestReady extends WorkflowBase {
     }
 
     const labels = new Set<string>();
-    for (const label of this.payload.pull_request.labels || []) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    for (const label of this.payload.pull_request.labels ?? []) {
       if (label.name) {
         labels.add(label.name);
       }
@@ -135,9 +136,9 @@ export class PullRequestReady extends WorkflowBase {
 
     let comment: string | undefined;
     if (this.payload.sender) {
-      comment = `Pull request ${this.payload.action || 'opened'} by [${this.payload.sender.login}](${this.payload.sender.html_url})`;
+      comment = `Pull request ${this.payload.action ?? 'opened'} by [${this.payload.sender.login}](${this.payload.sender.html_url})`;
     } else {
-      comment = `Pull request ${this.payload.action || 'opened'}!`;
+      comment = `Pull request ${this.payload.action ?? 'opened'}!`;
     }
 
     if (this.payload.pull_request.html_url) {

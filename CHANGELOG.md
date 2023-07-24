@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1 - 2023-07-24
+
+- Update npms
+
 ## 2.0.0 - 2023-05-24
 
 - Update npms

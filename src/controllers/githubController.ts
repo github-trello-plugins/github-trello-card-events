@@ -32,6 +32,7 @@ interface IndexRequestQuery {
 export async function index(req: Request<unknown, unknown, IndexRequestBody, IndexRequestQuery>, res: Response): Promise<Response> {
   try {
     const payload = req.body;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!payload) {
       throw new Error(`Unable to find payload in github event: ${JSON.stringify(req, null, 1)}`);
     }
@@ -44,6 +45,7 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
       }
 
       const hmac = crypto.createHmac('sha1', secret);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const hexDigest = hmac.update((req as IRequestWithRawBody).rawBody || Buffer.from(JSON.stringify(req.body))).digest('hex');
       const digest = Buffer.from(`sha1=${hexDigest}`, 'utf8');
       const checksum = Buffer.from(signature, 'utf8');
@@ -68,7 +70,7 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
 
     let workflow: WorkflowBase | undefined;
 
-    let result = `Skipping ${payload.action || 'unknown'} payload action.`;
+    let result = `Skipping ${payload.action ?? 'unknown'} payload action.`;
     if (payload.zen) {
       result = 'Feeling very zen-like!';
     } else {
@@ -79,7 +81,7 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
             workflow = new PullRequestMerged({
               eventPayload: payload,
               boardsAndBranchNamePrefixes,
-              destinationList: prMergeDestinationList || process.env.PR_MERGE_DEST_LIST || 'Done',
+              destinationList: prMergeDestinationList ?? process.env.PR_MERGE_DEST_LIST ?? 'Done',
               closeMilestone: req.query.closeMilestone !== 'false',
               createRelease: req.query.createRelease !== 'false',
             });
@@ -88,15 +90,15 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
             workflow = new WorkingOnCard({
               eventPayload: payload,
               boardsAndBranchNamePrefixes,
-              destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+              destinationList: prCloseDestinationList ?? process.env.PR_CLOSE_DEST_LIST ?? 'Doing',
             });
           }
-        } else if (['opened', 'reopened'].includes(payload.action || '')) {
+        } else if (['opened', 'reopened'].includes(payload.action ?? '')) {
           // pull_request opened or reopened
           workflow = new PullRequestReady({
             eventPayload: payload,
             boardsAndBranchNamePrefixes,
-            destinationList: prOpenDestinationList || process.env.PR_OPEN_DEST_LIST || 'Review',
+            destinationList: prOpenDestinationList ?? process.env.PR_OPEN_DEST_LIST ?? 'Review',
           });
         }
       } else {
@@ -104,7 +106,7 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
         workflow = new WorkingOnCard({
           eventPayload: payload,
           boardsAndBranchNamePrefixes,
-          destinationList: prCloseDestinationList || process.env.PR_CLOSE_DEST_LIST || 'Doing',
+          destinationList: prCloseDestinationList ?? process.env.PR_CLOSE_DEST_LIST ?? 'Doing',
         });
       }
 

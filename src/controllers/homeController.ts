@@ -13,8 +13,8 @@ declare const process: {
 };
 
 export function index(_req: Request, res: Response): Response {
-  const flyInfo = _.trim(`${process.env.FLY_REGION || ''} - ${process.env.FLY_ALLOC_ID || ''}`, '- ');
-  return res.send(`:)<br />${process.env.GIT_REV || ''}<br />${flyInfo}`);
+  const flyInfo = _.trim(`${process.env.FLY_REGION ?? ''} - ${process.env.FLY_ALLOC_ID ?? ''}`, '- ');
+  return res.send(`:)<br />${process.env.GIT_REV ?? ''}<br />${flyInfo}`);
 }
 
 export async function healthCheck(_req: Request, res: Response): Promise<Response> {

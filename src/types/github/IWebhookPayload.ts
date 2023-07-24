@@ -9,7 +9,7 @@ export interface IWebhookPayload {
   repository: IPayloadRepository;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   pull_request?: githubTypes['schemas']['pull-request'];
-  sender: {
+  sender?: {
     login: string;
     // eslint-disable-next-line @typescript-eslint/naming-convention
     html_url: string;

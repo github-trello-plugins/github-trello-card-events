@@ -43,14 +43,10 @@ export abstract class WorkflowBase {
   }
 
   public get repo(): IRepo {
-    if (this.payload.repository) {
-      return {
-        owner: this.payload.repository.owner.login,
-        repo: this.payload.repository.name,
-      };
-    }
-
-    throw new Error('Unable to find payload.repository');
+    return {
+      owner: this.payload.repository.owner.login,
+      repo: this.payload.repository.name,
+    };
   }
 
   public abstract execute(): Promise<string>;

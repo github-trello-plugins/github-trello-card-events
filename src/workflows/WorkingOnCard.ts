@@ -34,7 +34,7 @@ export class WorkingOnCard extends WorkflowBase {
 
     const cardNumberMatches = /\d+/g.exec(branchName);
     let cardNumber;
-    if (cardNumberMatches && cardNumberMatches.length) {
+    if (cardNumberMatches?.length) {
       [cardNumber] = cardNumberMatches;
     }
 

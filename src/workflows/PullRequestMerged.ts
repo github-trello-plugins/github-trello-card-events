@@ -42,7 +42,7 @@ export class PullRequestMerged extends WorkflowBase {
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
     const cardNumberMatches = /\d+/g.exec(branchName);
     let cardNumber: string | undefined;
-    if (cardNumberMatches && cardNumberMatches.length) {
+    if (cardNumberMatches?.length) {
       [cardNumber] = cardNumberMatches;
     }
 
@@ -180,10 +180,6 @@ export class PullRequestMerged extends WorkflowBase {
     });
 
     const milestone = milestoneResponse.data;
-    if (!milestone) {
-      throw new Error(`Unable to get newly created milestone: ${JSON.stringify(milestoneResponse)}`);
-    }
-
     console.log(`Milestone created: ${milestone.id}`);
     return milestone;
   }

@@ -15,7 +15,7 @@ declare const process: {
 const app = express();
 
 app.disable('x-powered-by');
-app.set('port', process.env.PORT || 8080);
+app.set('port', process.env.PORT ?? 8080);
 app.use(
   bodyParser.json({
     verify(req: IRequestWithRawBody, _: express.Response, rawBody: Buffer) {

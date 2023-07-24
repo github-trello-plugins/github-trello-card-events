@@ -67,7 +67,7 @@ export async function postMessage(args: IPostMessageMarkdownParams | IPostMessag
     ];
   }
 
-  const uri = args.webhookUrl || process.env.SLACK_WEBHOOK_URL;
+  const uri = args.webhookUrl ?? process.env.SLACK_WEBHOOK_URL;
   if (!uri) {
     throw new Error('No slack webhook uri specified');
   }
@@ -83,7 +83,7 @@ export async function postMessage(args: IPostMessageMarkdownParams | IPostMessag
 
 export async function postErrorMessage(args: IPostErrorMessageParams): Promise<void> {
   try {
-    const webhookUrl = args.webhookUrl || process.env.SLACK_ERROR_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL;
+    const webhookUrl = args.webhookUrl ?? process.env.SLACK_ERROR_WEBHOOK_URL ?? process.env.SLACK_WEBHOOK_URL;
     if (!webhookUrl) {
       console.error('No slack error webhook uri specified');
       return;
@@ -91,7 +91,7 @@ export async function postErrorMessage(args: IPostErrorMessageParams): Promise<v
 
     const simpleError = {
       message: args.error.message,
-      stack: args.error.stack || new Error().stack,
+      stack: args.error.stack ?? new Error().stack,
     };
 
     await postMessage({
