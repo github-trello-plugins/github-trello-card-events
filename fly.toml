@@ -30,6 +30,7 @@ kill_timeout = "5s"
   [[services.ports]]
     port = 443
     handlers = ["tls", "http"]
+    http_options = { response = { headers = { via = false, x-powered-by = false, server = false, fly-request-id = false } } }
 
   [services.concurrency]
     type = "connections"
