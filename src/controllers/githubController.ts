@@ -2,11 +2,11 @@ import * as crypto from 'crypto';
 
 import type { Request, Response } from 'express';
 
-import { postErrorMessage } from '../services/slackService';
-import type { IWebhookPayload } from '../types/github';
-import type { IRequestWithRawBody } from '../types/IRequestWithRawBody';
-import type { WorkflowBase } from '../workflows';
-import { PullRequestMerged, PullRequestReady, WorkingOnCard } from '../workflows';
+import { postErrorMessage } from '../services/slackService.js';
+import type { IWebhookPayload } from '../types/github/index.js';
+import type { IRequestWithRawBody } from '../types/IRequestWithRawBody.js';
+import { PullRequestMerged, PullRequestReady, WorkingOnCard } from '../workflows/index.js';
+import type { WorkflowBase } from '../workflows/WorkflowBase.js';
 
 declare const process: {
   env: {

@@ -1,4 +1,4 @@
-import type { IList } from './IList';
+import type { IList } from './IList.js';
 
 export interface IBoard {
   id: string;

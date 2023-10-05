@@ -1,10 +1,11 @@
 import bodyParser from 'body-parser';
 import errorHandler from 'errorhandler';
+import type { Express } from 'express';
 import express from 'express';
 
-import * as githubController from './controllers/githubController';
-import * as homeController from './controllers/homeController';
-import type { IRequestWithRawBody } from './types/IRequestWithRawBody';
+import * as githubController from './controllers/githubController.js';
+import * as homeController from './controllers/homeController.js';
+import type { IRequestWithRawBody } from './types/IRequestWithRawBody.js';
 
 declare const process: {
   env: {
@@ -12,17 +13,20 @@ declare const process: {
   };
 };
 
-const app = express();
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+const app = express() as Express;
 
 app.disable('x-powered-by');
 app.set('port', process.env.PORT ?? 8080);
 app.use(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   bodyParser.json({
     verify(req: IRequestWithRawBody, _: express.Response, rawBody: Buffer) {
       req.rawBody = rawBody;
     },
   }),
 );
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 app.use(errorHandler());
 
 // Hook up routes

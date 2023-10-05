@@ -1,2 +1,2 @@
-export * from './IPayloadRepository';
-export * from './IWebhookPayload';
+export * from './IPayloadRepository.js';
+export * from './IWebhookPayload.js';

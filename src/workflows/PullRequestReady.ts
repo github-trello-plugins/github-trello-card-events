@@ -1,7 +1,7 @@
 import type { ICard } from '../types/trello';
 
-import type { IWorkflowBaseParams } from './WorkflowBase';
-import { WorkflowBase } from './WorkflowBase';
+import type { IWorkflowBaseParams } from './WorkflowBase.js';
+import { WorkflowBase } from './WorkflowBase.js';
 
 interface IPullRequestReadyParams extends IWorkflowBaseParams {
   destinationList: string;

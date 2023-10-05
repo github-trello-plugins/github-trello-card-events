@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0 - 2023-10-05
+
+- Remove support for Node.js v16
+- Convert project to ES module
+- Update npms
+
 ## 2.0.1 - 2023-07-24
 
 - Update npms
