@@ -1,4 +1,4 @@
-import type { ILabel } from './ILabel';
+import type { ILabel } from './ILabel.js';
 
 export interface ICard {
   id: string;

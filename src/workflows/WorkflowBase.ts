@@ -1,9 +1,9 @@
 import type { Octokit } from '@octokit/rest';
 
-import { getGitHubClient } from '../services/githubService';
-import { TrelloService } from '../services/trelloService';
-import type { IWebhookPayload } from '../types/github';
-import type { IBoard, ICard, IList } from '../types/trello';
+import { getGitHubClient } from '../services/githubService.js';
+import { TrelloService } from '../services/trelloService.js';
+import type { IWebhookPayload } from '../types/github/index.js';
+import type { IBoard, ICard, IList } from '../types/trello/index.js';
 
 export interface IWorkflowBaseParams {
   boardsAndBranchNamePrefixes: Record<string, string>;

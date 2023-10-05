@@ -1,5 +1,5 @@
-import type { IWorkflowBaseParams } from './WorkflowBase';
-import { WorkflowBase } from './WorkflowBase';
+import type { IWorkflowBaseParams } from './WorkflowBase.js';
+import { WorkflowBase } from './WorkflowBase.js';
 
 interface IWorkingOnCardParams extends IWorkflowBaseParams {
   destinationList: string;

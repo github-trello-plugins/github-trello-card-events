@@ -1,9 +1,9 @@
 import type { Endpoints } from '@octokit/types';
 
-import type { ICard } from '../types/trello';
+import type { ICard } from '../types/trello/index.js';
 
-import type { IWorkflowBaseParams } from './WorkflowBase';
-import { WorkflowBase } from './WorkflowBase';
+import type { IWorkflowBaseParams } from './WorkflowBase.js';
+import { WorkflowBase } from './WorkflowBase.js';
 
 type IssuesCreateMilestoneResponse = Endpoints['POST /repos/{owner}/{repo}/milestones']['response']['data'];
 

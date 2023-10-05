@@ -13,7 +13,7 @@ module.exports = {
 
   overrides: [
     {
-      files: '*.js',
+      files: '*.cjs',
       options: {
         parser: 'babel',
       },

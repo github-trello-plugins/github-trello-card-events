@@ -2,7 +2,7 @@ import { URL } from 'url';
 
 import axios from 'axios';
 
-import type { IBoard, ICard, IError } from '../types/trello';
+import type { IBoard, ICard, IError } from '../types/trello/index.js';
 
 declare const process: {
   env: {
