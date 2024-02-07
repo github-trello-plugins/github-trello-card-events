@@ -18,13 +18,13 @@ for multiple boards/repos.
 | Name                    | Description                                             | Default Value |
 | ----------------------- | ------------------------------------------------------- | ------------- |
 | PORT                    | Port to run the site on                                 | `1339`        |
-| SLACK_WEBHOOK_URL       | URL for a Slack incoming webhook to post messages       |
-| SLACK_ERROR_WEBHOOK_URL | URL for a Slack incoming webhook to post errors         |
-| TRELLO_KEY              | Trello API key                                          |
-| TRELLO_TOKEN            | Trello API token                                        |
-| GITHUB_USER_AGENT       | Github API user agent                                   |
-| GITHUB_TOKEN            | Github API token                                        |
-| GITHUB_SECRET           | Secret used for validating requests                     |
+| SLACK_WEBHOOK_URL       | URL for a Slack incoming webhook to post messages       |               |
+| SLACK_ERROR_WEBHOOK_URL | URL for a Slack incoming webhook to post errors         |               |
+| TRELLO_KEY              | Trello API key                                          |               |
+| TRELLO_TOKEN            | Trello API token                                        |               |
+| GITHUB_USER_AGENT       | Github API user agent                                   |               |
+| GITHUB_TOKEN            | Github API token                                        |               |
+| GITHUB_SECRET           | Secret used for validating requests                     |               |
 | PR_OPEN_DEST_LIST       | Trello list for open pull requests pending review       | `Review`      |
 | PR_MERGE_DEST_LIST      | Trello list for merged pull requests pending deployment | `Done`        |
 | PR_CLOSE_DEST_LIST      | Trello list for closed pull requests pending deployment | `Doing`       |
@@ -33,8 +33,8 @@ for multiple boards/repos.
 
 | Name           | Description                                                                                                                                                                  | Required                          | Default Value                                                  |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------- |
-| boardName      | Trello board name                                                                                                                                                            | Yes - if boards is not defined    |
-| boards         | Boards and card prefixes. Key is board name, value is branch prefix. A branch prefix of `default` represents the board to use if the branch prefix does not match any others | Yes - if boardName is not defined |
+| boardName      | Trello board name                                                                                                                                                            | Yes - if boards is not defined    |                                                                |
+| boards         | Boards and card prefixes. Key is board name, value is branch prefix. A branch prefix of `default` represents the board to use if the branch prefix does not match any others | Yes - if boardName is not defined |                                                                |
 | pr_merge_dest  | Destination trello list name for PR merge events                                                                                                                             | No                                | `process.env.PR_MERGE_DEST_LIST` if defined; otherwise `Done`  |
 | pr_close_dest  | Destination trello list name for PR close events                                                                                                                             | No                                | `process.env.PR_CLOSE_DEST_LIST` if defined; otherwise `Doing` |
 | pr_open_dest   | Destination trello list name for PR open events                                                                                                                              | No                                | `process.env.PR_OPEN_DEST_LIST` if defined; otherwise `Review` |
