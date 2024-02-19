@@ -5,15 +5,19 @@ import { WorkflowBase } from './WorkflowBase.js';
 
 interface IPullRequestReadyParams extends IWorkflowBaseParams {
   destinationList: string;
+  destinationStatus: string;
 }
 
 export class PullRequestReady extends WorkflowBase {
   public destinationList: string;
 
+  public destinationStatus: string;
+
   public constructor(params: IPullRequestReadyParams) {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.destinationStatus = params.destinationStatus;
   }
 
   public async execute(): Promise<string> {

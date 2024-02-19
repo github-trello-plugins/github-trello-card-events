@@ -1,7 +1,5 @@
 import type { Endpoints } from '@octokit/types';
 
-import type { ICard } from '../types/trello/index.js';
-
 import type { IWorkflowBaseParams } from './WorkflowBase.js';
 import { WorkflowBase } from './WorkflowBase.js';
 
@@ -9,6 +7,7 @@ type IssuesCreateMilestoneResponse = Endpoints['POST /repos/{owner}/{repo}/miles
 
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
+  destinationStatus: string;
   closeMilestone: boolean;
   createRelease: boolean;
 }
@@ -22,6 +21,8 @@ interface ICreateMilestoneParams {
 export class PullRequestMerged extends WorkflowBase {
   public destinationList: string;
 
+  public destinationStatus: string;
+
   public createRelease: boolean;
 
   public closeMilestone: boolean;
@@ -30,6 +31,7 @@ export class PullRequestMerged extends WorkflowBase {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.destinationStatus = params.destinationStatus;
     this.createRelease = params.createRelease;
     this.closeMilestone = params.closeMilestone;
   }
@@ -40,48 +42,23 @@ export class PullRequestMerged extends WorkflowBase {
     }
 
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
-    const cardNumberMatches = /\d+/g.exec(branchName);
-    let cardNumber: string | undefined;
-    if (cardNumberMatches?.length) {
-      [cardNumber] = cardNumberMatches;
-    }
-
-    if (!cardNumber) {
-      console.log(JSON.stringify(this.payload));
-      return `PullRequestMerged: Could not find card number in branch name\n${JSON.stringify(this.payload)}`;
-    }
 
     let result = `Starting PullRequestMerged workflow\n-----------------`;
-    result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
 
-    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
-    result += `\n${getBoardNameDetails}`;
+    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, result);
+    const jiraIssue = await this.getJiraIssue(branchName, result);
 
-    if (trelloBoardName) {
-      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
-    } else {
-      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      throw new Error(result);
+    if (trelloCardResults) {
+      result += `\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`;
     }
 
-    const board = await this.getBoard(trelloBoardName);
-    const list = this.getList(board, this.destinationList);
+    if (jiraIssue) {
+      result += `\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`;
+    }
 
-    let card: ICard;
-
-    try {
-      card = await this.getCard({
-        boardId: board.id,
-        cardNumber,
-      });
-    } catch (ex) {
-      if (ex instanceof Error) {
-        ex.message = `${result}\n${ex.message}`;
-      } else {
-        (ex as Error).message = result;
-      }
-
-      throw ex;
+    if (!trelloCardResults && !jiraIssue) {
+      result += `\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`;
+      throw new Error(result);
     }
 
     let comment: string;
@@ -91,19 +68,33 @@ export class PullRequestMerged extends WorkflowBase {
       comment = `Pull request merged!`;
     }
 
-    const moveCardResult = await this.moveCard({
-      card,
-      list,
-      comment,
-    });
+    if (trelloCardResults) {
+      const moveCardResult = await this.moveCard({
+        ...trelloCardResults,
+        comment,
+      });
 
-    result += `\n${moveCardResult}`;
+      result += `\n${moveCardResult}`;
+    }
 
     try {
       const now = new Date().toISOString();
+      let description = '';
+      if (jiraIssue) {
+        description = `* [${jiraIssue.fields.summary}](${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key})`;
+      }
+
+      if (trelloCardResults) {
+        if (description) {
+          description += '\n';
+        }
+
+        description += `* [${trelloCardResults.card.name}](${trelloCardResults.card.shortUrl})`;
+      }
+
       const milestone = await this.createMilestone({
         due: now,
-        description: `* [${card.name}](${card.shortUrl})`,
+        description,
       });
 
       result += `\nAssigning PR to milestone: ${milestone.number}`;

@@ -1,12 +1,15 @@
 import type { Octokit } from '@octokit/rest';
 
 import { getGitHubClient } from '../services/githubService.js';
+import { JiraService } from '../services/jiraService';
 import { TrelloService } from '../services/trelloService.js';
 import type { IWebhookPayload } from '../types/github/index.js';
+import type { Issue } from '../types/jira/index.js';
 import type { IBoard, ICard, IList } from '../types/trello/index.js';
 
 export interface IWorkflowBaseParams {
   boardsAndBranchNamePrefixes: Record<string, string>;
+  jiraKeyPrefix?: string;
   eventPayload: IWebhookPayload;
 }
 
@@ -26,20 +29,35 @@ interface IRepo {
   repo: string;
 }
 
+export interface IGetTrelloCardDetailsResult {
+  card: ICard;
+  list: IList;
+  board: IBoard;
+}
+
 export abstract class WorkflowBase {
   protected readonly github: Octokit;
 
   protected readonly trello: TrelloService;
 
+  protected readonly jira: JiraService | undefined;
+
   protected readonly payload: IWebhookPayload;
 
   protected readonly boardsAndBranchNamePrefixes: Record<string, string>;
 
-  public constructor({ boardsAndBranchNamePrefixes, eventPayload }: IWorkflowBaseParams) {
+  protected readonly jiraKeyPrefix?: string;
+
+  public constructor({ boardsAndBranchNamePrefixes, jiraKeyPrefix, eventPayload }: IWorkflowBaseParams) {
     this.github = getGitHubClient();
     this.trello = new TrelloService();
+    if (jiraKeyPrefix) {
+      this.jira = new JiraService();
+    }
+
     this.boardsAndBranchNamePrefixes = boardsAndBranchNamePrefixes;
     this.payload = eventPayload;
+    this.jiraKeyPrefix = jiraKeyPrefix;
   }
 
   public get repo(): IRepo {
@@ -50,6 +68,98 @@ export abstract class WorkflowBase {
   }
 
   public abstract execute(): Promise<string>;
+
+  protected async getJiraIssue(branchName: string, log: string): Promise<Issue | undefined> {
+    if (!this.payload.pull_request) {
+      throw new Error(`There were no pull_request details with payload: ${JSON.stringify(this.payload)}`);
+    }
+
+    if (this.jira && this.jiraKeyPrefix) {
+      // eslint-disable-next-line security/detect-non-literal-regexp
+      const jiraKeyRegEx = new RegExp(`${this.jiraKeyPrefix}[- ](\\d+)`, 'i');
+
+      // Try to find the JIRA issue key from the PR title first and otherwise fallback to branch name
+      let jiraKey: string | undefined;
+      const prNameMatches = jiraKeyRegEx.exec(this.payload.pull_request.title);
+      if (prNameMatches?.length) {
+        jiraKey = `${this.jiraKeyPrefix}-${prNameMatches[1]}`;
+      }
+
+      if (!jiraKey) {
+        const branchNameMatches = jiraKeyRegEx.exec(branchName);
+        if (branchNameMatches?.length) {
+          jiraKey = `${this.jiraKeyPrefix}-${branchNameMatches[1]}`;
+        }
+      }
+
+      if (jiraKey) {
+        try {
+          return await this.jira.getIssue(jiraKey);
+        } catch (ex) {
+          if (ex instanceof Error) {
+            ex.message = `${log}\n${ex.message}`;
+          } else {
+            (ex as Error).message = log;
+          }
+
+          throw ex;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  protected async getTrelloCardDetails(branchName: string, listName: string, log: string): Promise<IGetTrelloCardDetailsResult | undefined> {
+    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
+    log += `\n${getBoardNameDetails}`;
+
+    if (trelloBoardName) {
+      log += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
+    } else {
+      log += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
+      throw new Error(log);
+    }
+
+    const trelloBranchPrefix = this.boardsAndBranchNamePrefixes[trelloBoardName] ?? '';
+    // eslint-disable-next-line security/detect-non-literal-regexp
+    const cardNumberRegEx = new RegExp(`${trelloBranchPrefix}(\\d+)`, 'i');
+    const cardNumberMatches = cardNumberRegEx.exec(branchName);
+    let cardNumber: string | undefined;
+    if (cardNumberMatches?.length) {
+      cardNumber = cardNumberMatches[1];
+    }
+
+    if (!cardNumber) {
+      log += `\nUnable to find card number in branch name: ${branchName}`;
+      return undefined;
+    }
+
+    const board = await this.getBoard(trelloBoardName);
+    const list = this.getList(board, listName);
+    let card: ICard;
+
+    try {
+      card = await this.getCard({
+        boardId: board.id,
+        cardNumber,
+      });
+    } catch (ex) {
+      if (ex instanceof Error) {
+        ex.message = `${log}\n${ex.message}`;
+      } else {
+        (ex as Error).message = log;
+      }
+
+      throw ex;
+    }
+
+    return {
+      board,
+      list,
+      card,
+    };
+  }
 
   protected getBoardNameFromBranchName(branchName: string): [string | undefined, string] {
     let result = `Using board/branch mapping: ${JSON.stringify(this.boardsAndBranchNamePrefixes)}`;

@@ -14,6 +14,9 @@ declare const process: {
     PR_MERGE_DEST_LIST: string | undefined;
     PR_CLOSE_DEST_LIST: string | undefined;
     PR_OPEN_DEST_LIST: string | undefined;
+    PR_MERGE_DEST_STATUS: string | undefined;
+    PR_CLOSE_DEST_STATUS: string | undefined;
+    PR_OPEN_DEST_STATUS: string | undefined;
     SLACK_ERROR_WEBHOOK: string | undefined;
   };
 };
@@ -22,9 +25,14 @@ type IndexRequestBody = IWebhookPayload & { zen?: string };
 interface IndexRequestQuery {
   boards?: Record<string, string>;
   boardName?: string;
+  trello_branch_prefix?: string;
   pr_merge_dest?: string;
   pr_close_dest?: string;
   pr_open_dest?: string;
+  jira_key_prefix?: string;
+  pr_merge_status?: string;
+  pr_close_status?: string;
+  pr_open_status?: string;
   closeMilestone?: string;
   createRelease?: string;
 }
@@ -58,7 +66,7 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
     const trelloBoardName = req.query.boardName;
     if (trelloBoardName) {
       boardsAndBranchNamePrefixes = {
-        [trelloBoardName]: '',
+        [trelloBoardName]: req.query.trello_branch_prefix ?? '',
       };
     } else if (!boardsAndBranchNamePrefixes) {
       throw new Error('`boardName` query string is not defined.');
@@ -67,6 +75,11 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
     const prMergeDestinationList = req.query.pr_merge_dest;
     const prCloseDestinationList = req.query.pr_close_dest;
     const prOpenDestinationList = req.query.pr_open_dest;
+    const trelloBranchPrefix = req.query.trello_branch_prefix;
+    const jiraKeyPrefix = req.query.jira_key_prefix;
+    const prMergeDestinationStatus = req.query.pr_merge_status;
+    const prCloseDestinationStatus = req.query.pr_close_status;
+    const prOpenDestinationStatus = req.query.pr_open_status;
 
     let workflow: WorkflowBase | undefined;
 
@@ -82,6 +95,8 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
               eventPayload: payload,
               boardsAndBranchNamePrefixes,
               destinationList: prMergeDestinationList ?? process.env.PR_MERGE_DEST_LIST ?? 'Done',
+              jiraKeyPrefix,
+              destinationStatus: prMergeDestinationStatus ?? process.env.PR_MERGE_DEST_STATUS ?? 'Done',
               closeMilestone: req.query.closeMilestone !== 'false',
               createRelease: req.query.createRelease !== 'false',
             });
@@ -91,6 +106,8 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
               eventPayload: payload,
               boardsAndBranchNamePrefixes,
               destinationList: prCloseDestinationList ?? process.env.PR_CLOSE_DEST_LIST ?? 'Doing',
+              jiraKeyPrefix,
+              destinationStatus: prCloseDestinationStatus ?? process.env.PR_CLOSE_DEST_STATUS ?? 'In Progress',
             });
           }
         } else if (['opened', 'reopened'].includes(payload.action ?? '')) {
@@ -99,6 +116,8 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
             eventPayload: payload,
             boardsAndBranchNamePrefixes,
             destinationList: prOpenDestinationList ?? process.env.PR_OPEN_DEST_LIST ?? 'Review',
+            jiraKeyPrefix,
+            destinationStatus: prOpenDestinationStatus ?? process.env.PR_OPEN_DEST_STATUS ?? 'Review',
           });
         }
       } else {
@@ -106,7 +125,10 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
         workflow = new WorkingOnCard({
           eventPayload: payload,
           boardsAndBranchNamePrefixes,
+          trelloBranchPrefix,
           destinationList: prCloseDestinationList ?? process.env.PR_CLOSE_DEST_LIST ?? 'Doing',
+          jiraKeyPrefix,
+          destinationStatus: prCloseDestinationStatus ?? process.env.PR_CLOSE_DEST_STATUS ?? 'In Progress',
         });
       }
 

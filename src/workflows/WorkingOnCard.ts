@@ -3,15 +3,19 @@ import { WorkflowBase } from './WorkflowBase.js';
 
 interface IWorkingOnCardParams extends IWorkflowBaseParams {
   destinationList: string;
+  destinationStatus: string;
 }
 
 export class WorkingOnCard extends WorkflowBase {
   public destinationList: string;
 
+  public destinationStatus: string;
+
   public constructor(params: IWorkingOnCardParams) {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.destinationStatus = params.destinationStatus;
   }
 
   public async execute(): Promise<string> {
