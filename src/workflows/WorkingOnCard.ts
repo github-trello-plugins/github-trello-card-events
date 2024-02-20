@@ -36,56 +36,63 @@ export class WorkingOnCard extends WorkflowBase {
       branchName = this.payload.ref.trim().replace(/\W+/g, '-').toLowerCase();
     }
 
-    const cardNumberMatches = /\d+/g.exec(branchName);
-    let cardNumber;
-    if (cardNumberMatches?.length) {
-      [cardNumber] = cardNumberMatches;
+    const logMessages = [`Starting WorkingOnCard workflow\n-----------------`];
+
+    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, logMessages);
+    const jiraIssue = await this.getJiraIssue(branchName, logMessages);
+
+    if (trelloCardResults) {
+      logMessages.push(`\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`);
     }
 
-    if (!cardNumber) {
-      console.log(JSON.stringify(this.payload));
-      return `WorkingOnCard: Could not find card number in branch name\n${JSON.stringify(this.payload)}`;
+    if (jiraIssue) {
+      logMessages.push(`\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`);
     }
 
-    let result = `Starting WorkingOnCard workflow\n-----------------`;
-    result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
-
-    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
-    result += `\n${getBoardNameDetails}`;
-
-    if (trelloBoardName) {
-      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
-    } else {
-      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      throw new Error(result);
+    if (!trelloCardResults && !jiraIssue) {
+      logMessages.push(`\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`);
+      throw new Error(logMessages.join(''));
     }
 
-    const board = await this.getBoard(trelloBoardName);
-    const list = this.getList(board, this.destinationList);
+    if (this.jira && jiraIssue) {
+      try {
+        const updateJiraIssueResult = await this.updateJiraIssue({
+          issueIdOrKey: jiraIssue.key,
+          status: this.destinationStatus,
+          comment,
+        });
 
-    try {
-      const card = await this.getCard({
-        boardId: board.id,
-        cardNumber,
-      });
+        logMessages.push(`\n${updateJiraIssueResult}`);
+      } catch (ex) {
+        if (ex instanceof Error) {
+          ex.message = `${logMessages.join('')}\n${ex.message}`;
+        } else {
+          (ex as Error).message = logMessages.join('');
+        }
 
-      const moveCardResult = await this.moveCard({
-        card,
-        list,
-        comment,
-      });
-
-      result += `\n${moveCardResult}`;
-    } catch (ex) {
-      if (ex instanceof Error) {
-        ex.message = `${result}\n${ex.message}`;
-      } else {
-        (ex as Error).message = result;
+        throw ex;
       }
-
-      throw ex;
     }
 
-    return result;
+    if (trelloCardResults) {
+      try {
+        const moveCardResult = await this.moveCard({
+          ...trelloCardResults,
+          comment,
+        });
+
+        logMessages.push(`\n${moveCardResult}`);
+      } catch (ex) {
+        if (ex instanceof Error) {
+          ex.message = `${logMessages.join('')}\n${ex.message}`;
+        } else {
+          (ex as Error).message = logMessages.join('');
+        }
+
+        throw ex;
+      }
+    }
+
+    return logMessages.join('');
   }
 }

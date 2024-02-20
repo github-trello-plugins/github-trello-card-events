@@ -24,6 +24,12 @@ interface IMoveCardParams {
   comment?: string;
 }
 
+interface IUpdateJiraStatusParams {
+  issueIdOrKey: string;
+  status: string;
+  comment?: string;
+}
+
 interface IRepo {
   owner: string;
   repo: string;
@@ -268,6 +274,39 @@ export abstract class WorkflowBase {
     }
 
     result += `\nMoved card ${card.id} to list: ${list.name}`;
+    return result;
+  }
+
+  protected async updateJiraIssue({ issueIdOrKey, status, comment }: IUpdateJiraStatusParams): Promise<string> {
+    if (!this.jira) {
+      return 'No jira service';
+    }
+
+    let result = `Updating jira issue status to: ${status}`;
+
+    await this.jira.updateIssue({
+      issueIdOrKey,
+      status,
+    });
+
+    if (comment) {
+      try {
+        result += `\nAdding comment to jira issue: ${comment}`;
+        await this.jira.addCommentToIssue({
+          issueIdOrKey,
+          text: comment,
+        });
+      } catch (ex) {
+        if (ex instanceof Error && ex.stack) {
+          result += `\n${ex.stack}`;
+        }
+
+        // Log, but ignore since this is a bonus and not the primary action
+        console.error(ex);
+      }
+    }
+
+    result += `\nUpdated issue ${issueIdOrKey} status: ${status}`;
     return result;
   }
 }
