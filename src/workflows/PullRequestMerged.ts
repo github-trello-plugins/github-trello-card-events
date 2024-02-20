@@ -52,8 +52,10 @@ export class PullRequestMerged extends WorkflowBase {
       logMessages.push(`\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`);
     }
 
+    let jiraIssueUrl: string | undefined;
     if (jiraIssue) {
       logMessages.push(`\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`);
+      jiraIssueUrl = `${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key}`;
     }
 
     if (!trelloCardResults && !jiraIssue) {
@@ -81,7 +83,7 @@ export class PullRequestMerged extends WorkflowBase {
       const now = new Date().toISOString();
       let description = '';
       if (jiraIssue) {
-        description = `* [${jiraIssue.fields.summary}](${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key})`;
+        description = `* [${jiraIssue.fields.summary}](${jiraIssueUrl})`;
       }
 
       if (trelloCardResults) {
@@ -123,7 +125,7 @@ export class PullRequestMerged extends WorkflowBase {
 
           if (jiraIssue) {
             releaseMessage += '\n\n## Jira Issue(s)';
-            releaseMessage += `\n* [${jiraIssue.fields.summary}](${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key})`;
+            releaseMessage += `\n* [${jiraIssue.fields.summary}](${jiraIssueUrl})`;
           }
 
           if (trelloCardResults) {
