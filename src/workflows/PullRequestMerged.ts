@@ -118,11 +118,18 @@ export class PullRequestMerged extends WorkflowBase {
 
           result += `\nCreating github release: ${releaseName}... `;
 
-          let releaseMessage = '## Trello Card(s)';
-          releaseMessage += `\n* [${card.name}](${card.shortUrl})`;
-
-          releaseMessage += '\n\n## Pull Request(s)';
+          let releaseMessage = '\n\n## Pull Request(s)';
           releaseMessage += `\n* [${this.payload.pull_request.title}](${this.payload.pull_request.html_url})`;
+
+          if (jiraIssue) {
+            releaseMessage += '\n\n## Jira Issue(s)';
+            releaseMessage += `\n* [${jiraIssue.fields.summary}](${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key})`;
+          }
+
+          if (trelloCardResults) {
+            releaseMessage += '\n\n## Trello Card(s)';
+            releaseMessage += `\n* [${trelloCardResults.card.name}](${trelloCardResults.card.shortUrl})`;
+          }
 
           releaseMessage += '\n\n## Milestone(s)';
           releaseMessage += `\n* [${milestone.title}](${milestone.html_url})`;
@@ -141,12 +148,24 @@ export class PullRequestMerged extends WorkflowBase {
         }
       }
 
-      result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${card.id}... `;
-      await this.trello.addAttachmentToCard({
-        cardId: card.id,
-        name: 'github-milestone',
-        url: milestone.html_url,
-      });
+      if (this.jira && jiraIssue) {
+        result += `\nAdding milestone url (${milestone.html_url}) as remote link to jira issue: ${jiraIssue.key}... `;
+        await this.jira.addRemoteLinkToIssue({
+          issueIdOrKey: jiraIssue.key,
+          name: 'github-milestone',
+          url: milestone.html_url,
+        });
+      }
+
+      if (trelloCardResults) {
+        result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${trelloCardResults.card.id}... `;
+        await this.trello.addAttachmentToCard({
+          cardId: trelloCardResults.card.id,
+          name: 'github-milestone',
+          url: milestone.html_url,
+        });
+      }
+
       result += 'Done!';
     } catch (ex) {
       if (ex instanceof Error && ex.stack) {

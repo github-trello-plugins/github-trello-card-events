@@ -75,7 +75,6 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
     const prMergeDestinationList = req.query.pr_merge_dest;
     const prCloseDestinationList = req.query.pr_close_dest;
     const prOpenDestinationList = req.query.pr_open_dest;
-    const trelloBranchPrefix = req.query.trello_branch_prefix;
     const jiraKeyPrefix = req.query.jira_key_prefix;
     const prMergeDestinationStatus = req.query.pr_merge_status;
     const prCloseDestinationStatus = req.query.pr_close_status;
@@ -125,7 +124,6 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
         workflow = new WorkingOnCard({
           eventPayload: payload,
           boardsAndBranchNamePrefixes,
-          trelloBranchPrefix,
           destinationList: prCloseDestinationList ?? process.env.PR_CLOSE_DEST_LIST ?? 'Doing',
           jiraKeyPrefix,
           destinationStatus: prCloseDestinationStatus ?? process.env.PR_CLOSE_DEST_STATUS ?? 'In Progress',
