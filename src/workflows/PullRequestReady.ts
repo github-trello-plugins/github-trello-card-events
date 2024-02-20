@@ -51,19 +51,27 @@ export class PullRequestReady extends WorkflowBase {
     // Update issue with card link and apply labels
     let body = this.payload.pull_request.body ?? '';
     // eslint-disable-next-line security/detect-non-literal-regexp
-    const hasFooterLinksRegEx = new RegExp(`\\n\\n---(\\n(?:${urls.join('|')}))+$`, 'gim');
+    const hasFooterLinksRegEx = new RegExp(`(?:^|---\\n)(?:${urls.join('|')})$`, 'gim');
 
-    if (!hasFooterLinksRegEx.test(body)) {
+    if (body && !hasFooterLinksRegEx.test(body)) {
       body += '\n\n---';
     }
 
     if (jiraIssueUrl && !body.includes(jiraIssueUrl)) {
-      body += `\n${jiraIssueUrl}`;
+      if (body) {
+        body += '\n';
+      }
+
+      body += jiraIssueUrl;
       logMessages.push(`\nAdding jira issue link to PR body`);
     }
 
     if (trelloCardResults && !body.includes(trelloCardResults.card.shortUrl)) {
-      body += `\n${trelloCardResults.card.shortUrl}`;
+      if (body) {
+        body += '\n';
+      }
+
+      body += trelloCardResults.card.shortUrl;
       logMessages.push(`\nAdding card shortUrl to PR body`);
     }
 
