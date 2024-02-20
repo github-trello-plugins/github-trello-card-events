@@ -69,7 +69,7 @@ export abstract class WorkflowBase {
 
   public abstract execute(): Promise<string>;
 
-  protected async getJiraIssue(branchName: string, log: string): Promise<Issue | undefined> {
+  protected async getJiraIssue(branchName: string, logMessages: string[]): Promise<Issue | undefined> {
     if (!this.payload.pull_request) {
       throw new Error(`There were no pull_request details with payload: ${JSON.stringify(this.payload)}`);
     }
@@ -97,9 +97,9 @@ export abstract class WorkflowBase {
           return await this.jira.getIssue(jiraKey);
         } catch (ex) {
           if (ex instanceof Error) {
-            ex.message = `${log}\n${ex.message}`;
+            ex.message = `${logMessages.join('')}\n${ex.message}`;
           } else {
-            (ex as Error).message = log;
+            (ex as Error).message = logMessages.join('');
           }
 
           throw ex;
@@ -110,15 +110,15 @@ export abstract class WorkflowBase {
     return undefined;
   }
 
-  protected async getTrelloCardDetails(branchName: string, listName: string, log: string): Promise<IGetTrelloCardDetailsResult | undefined> {
+  protected async getTrelloCardDetails(branchName: string, listName: string, logMessages: string[]): Promise<IGetTrelloCardDetailsResult | undefined> {
     const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
-    log += `\n${getBoardNameDetails}`;
+    logMessages.push(`\n${getBoardNameDetails}`);
 
     if (trelloBoardName) {
-      log += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
+      logMessages.push(`\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`);
     } else {
-      log += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      throw new Error(log);
+      logMessages.push(`\nUnable to find board name based on card prefix in branch name: ${branchName}`);
+      throw new Error(logMessages.join(''));
     }
 
     const trelloBranchPrefix = this.boardsAndBranchNamePrefixes[trelloBoardName] ?? '';
@@ -131,7 +131,7 @@ export abstract class WorkflowBase {
     }
 
     if (!cardNumber) {
-      log += `\nUnable to find card number in branch name: ${branchName}`;
+      logMessages.push(`\nUnable to find card number in branch name: ${branchName}`);
       return undefined;
     }
 
@@ -146,9 +146,9 @@ export abstract class WorkflowBase {
       });
     } catch (ex) {
       if (ex instanceof Error) {
-        ex.message = `${log}\n${ex.message}`;
+        ex.message = `${logMessages.join('')}\n${ex.message}`;
       } else {
-        (ex as Error).message = log;
+        (ex as Error).message = logMessages.join('');
       }
 
       throw ex;

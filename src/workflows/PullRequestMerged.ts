@@ -43,22 +43,22 @@ export class PullRequestMerged extends WorkflowBase {
 
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
 
-    let result = `Starting PullRequestMerged workflow\n-----------------`;
+    const logMessages = [`Starting PullRequestMerged workflow\n-----------------`];
 
-    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, result);
-    const jiraIssue = await this.getJiraIssue(branchName, result);
+    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, logMessages);
+    const jiraIssue = await this.getJiraIssue(branchName, logMessages);
 
     if (trelloCardResults) {
-      result += `\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`;
+      logMessages.push(`\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`);
     }
 
     if (jiraIssue) {
-      result += `\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`;
+      logMessages.push(`\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`);
     }
 
     if (!trelloCardResults && !jiraIssue) {
-      result += `\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`;
-      throw new Error(result);
+      logMessages.push(`\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`);
+      throw new Error(logMessages.join(''));
     }
 
     let comment: string;
@@ -74,7 +74,7 @@ export class PullRequestMerged extends WorkflowBase {
         comment,
       });
 
-      result += `\n${moveCardResult}`;
+      logMessages.push(`\n${moveCardResult}`);
     }
 
     try {
@@ -97,7 +97,7 @@ export class PullRequestMerged extends WorkflowBase {
         description,
       });
 
-      result += `\nAssigning PR to milestone: ${milestone.number}`;
+      logMessages.push(`\nAssigning PR to milestone: ${milestone.number}`);
 
       await this.github.issues.update({
         owner: this.repo.owner,
@@ -116,7 +116,7 @@ export class PullRequestMerged extends WorkflowBase {
             releaseName += releaseNameMatches[i];
           }
 
-          result += `\nCreating github release: ${releaseName}... `;
+          logMessages.push(`\nCreating github release: ${releaseName}... `);
 
           let releaseMessage = '\n\n## Pull Request(s)';
           releaseMessage += `\n* [${this.payload.pull_request.title}](${this.payload.pull_request.html_url})`;
@@ -142,14 +142,14 @@ export class PullRequestMerged extends WorkflowBase {
             name: releaseName,
             body: releaseMessage,
           });
-          result += `Done!`;
+          logMessages.push(`Done!`);
         } else {
-          result += `\nCould not figure out how to name the release :(`;
+          logMessages.push(`\nCould not figure out how to name the release :(`);
         }
       }
 
       if (this.jira && jiraIssue) {
-        result += `\nAdding milestone url (${milestone.html_url}) as remote link to jira issue: ${jiraIssue.key}... `;
+        logMessages.push(`\nAdding milestone url (${milestone.html_url}) as remote link to jira issue: ${jiraIssue.key}... `);
         await this.jira.addRemoteLinkToIssue({
           issueIdOrKey: jiraIssue.key,
           name: 'github-milestone',
@@ -158,7 +158,7 @@ export class PullRequestMerged extends WorkflowBase {
       }
 
       if (trelloCardResults) {
-        result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${trelloCardResults.card.id}... `;
+        logMessages.push(`\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${trelloCardResults.card.id}... `);
         await this.trello.addAttachmentToCard({
           cardId: trelloCardResults.card.id,
           name: 'github-milestone',
@@ -166,16 +166,16 @@ export class PullRequestMerged extends WorkflowBase {
         });
       }
 
-      result += 'Done!';
+      logMessages.push('\nDone!');
     } catch (ex) {
       if (ex instanceof Error && ex.stack) {
-        result += `\n${ex.stack}`;
+        logMessages.push(`\n${ex.stack}`);
       }
 
       console.error(ex);
     }
 
-    return result;
+    return logMessages.join('');
   }
 
   private async createMilestone({ due, title = `Deploy ${due}`, description }: ICreateMilestoneParams): Promise<IssuesCreateMilestoneResponse> {
