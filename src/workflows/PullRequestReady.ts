@@ -51,7 +51,7 @@ export class PullRequestReady extends WorkflowBase {
     // Update issue with card link and apply labels
     let body = this.payload.pull_request.body ?? '';
     // eslint-disable-next-line security/detect-non-literal-regexp
-    const hasFooterLinksRegEx = new RegExp(`(?:^|---\\n)(?:${urls.join('|')})$`, 'gim');
+    const hasFooterLinksRegEx = new RegExp(`(?:^|---\\n)(?:${urls.join('|').replaceAll('/', '\\/')})$`, 'gim');
 
     if (body && !hasFooterLinksRegEx.test(body)) {
       body += '\n\n---';
