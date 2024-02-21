@@ -62,24 +62,54 @@ export class JiraService {
       },
     };
 
-    await axios.put(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}`, {
-      fields: updateFields,
-    });
+    await axios.put(
+      `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}`,
+      {
+        fields: updateFields,
+      },
+      {
+        auth: {
+          username: this.email,
+          password: this.token,
+        },
+        timeout: 20000,
+      },
+    );
   }
 
   public async addRemoteLinkToIssue({ issueIdOrKey, name, url }: { issueIdOrKey: string; name: string; url: string }): Promise<void> {
-    await axios.post(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/remotelink`, {
-      globalId: url,
-      object: {
-        url,
-        title: name,
+    await axios.post(
+      `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/remotelink`,
+      {
+        globalId: url,
+        object: {
+          url,
+          title: name,
+        },
       },
-    });
+      {
+        auth: {
+          username: this.email,
+          password: this.token,
+        },
+        timeout: 20000,
+      },
+    );
   }
 
   public async addCommentToIssue({ issueIdOrKey, text }: { issueIdOrKey: string; text: string }): Promise<void> {
-    await axios.post(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/comment`, {
-      body: text,
-    });
+    await axios.post(
+      `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/comment`,
+      {
+        body: text,
+      },
+      {
+        auth: {
+          username: this.email,
+          password: this.token,
+        },
+        timeout: 20000,
+      },
+    );
   }
 }
