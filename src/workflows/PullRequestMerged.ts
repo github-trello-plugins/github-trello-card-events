@@ -1,7 +1,5 @@
 import type { Endpoints } from '@octokit/types';
 
-import type { ICard } from '../types/trello/index.js';
-
 import type { IWorkflowBaseParams } from './WorkflowBase.js';
 import { WorkflowBase } from './WorkflowBase.js';
 
@@ -9,6 +7,7 @@ type IssuesCreateMilestoneResponse = Endpoints['POST /repos/{owner}/{repo}/miles
 
 interface IPullRequestMergedParams extends IWorkflowBaseParams {
   destinationList: string;
+  destinationStatus: string;
   closeMilestone: boolean;
   createRelease: boolean;
 }
@@ -22,6 +21,8 @@ interface ICreateMilestoneParams {
 export class PullRequestMerged extends WorkflowBase {
   public destinationList: string;
 
+  public destinationStatus: string;
+
   public createRelease: boolean;
 
   public closeMilestone: boolean;
@@ -30,6 +31,7 @@ export class PullRequestMerged extends WorkflowBase {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.destinationStatus = params.destinationStatus;
     this.createRelease = params.createRelease;
     this.closeMilestone = params.closeMilestone;
   }
@@ -40,48 +42,25 @@ export class PullRequestMerged extends WorkflowBase {
     }
 
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
-    const cardNumberMatches = /\d+/g.exec(branchName);
-    let cardNumber: string | undefined;
-    if (cardNumberMatches?.length) {
-      [cardNumber] = cardNumberMatches;
+
+    const logMessages = [`Starting PullRequestMerged workflow\n-----------------`];
+
+    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, logMessages);
+    const jiraIssue = await this.getJiraIssue(branchName, logMessages);
+
+    if (trelloCardResults) {
+      logMessages.push(`\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`);
     }
 
-    if (!cardNumber) {
-      console.log(JSON.stringify(this.payload));
-      return `PullRequestMerged: Could not find card number in branch name\n${JSON.stringify(this.payload)}`;
+    let jiraIssueUrl: string | undefined;
+    if (jiraIssue) {
+      logMessages.push(`\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`);
+      jiraIssueUrl = `${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key}`;
     }
 
-    let result = `Starting PullRequestMerged workflow\n-----------------`;
-    result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
-
-    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
-    result += `\n${getBoardNameDetails}`;
-
-    if (trelloBoardName) {
-      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
-    } else {
-      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      throw new Error(result);
-    }
-
-    const board = await this.getBoard(trelloBoardName);
-    const list = this.getList(board, this.destinationList);
-
-    let card: ICard;
-
-    try {
-      card = await this.getCard({
-        boardId: board.id,
-        cardNumber,
-      });
-    } catch (ex) {
-      if (ex instanceof Error) {
-        ex.message = `${result}\n${ex.message}`;
-      } else {
-        (ex as Error).message = result;
-      }
-
-      throw ex;
+    if (!trelloCardResults && !jiraIssue) {
+      logMessages.push(`\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`);
+      throw new Error(logMessages.join(''));
     }
 
     let comment: string;
@@ -91,22 +70,46 @@ export class PullRequestMerged extends WorkflowBase {
       comment = `Pull request merged!`;
     }
 
-    const moveCardResult = await this.moveCard({
-      card,
-      list,
-      comment,
-    });
+    if (jiraIssue) {
+      const updateJiraIssueResult = await this.updateJiraIssue({
+        issueIdOrKey: jiraIssue.key,
+        status: this.destinationStatus,
+        comment,
+      });
 
-    result += `\n${moveCardResult}`;
+      logMessages.push(`\n${updateJiraIssueResult}`);
+    }
+
+    if (trelloCardResults) {
+      const moveCardResult = await this.moveCard({
+        ...trelloCardResults,
+        comment,
+      });
+
+      logMessages.push(`\n${moveCardResult}`);
+    }
 
     try {
       const now = new Date().toISOString();
+      let description = '';
+      if (jiraIssue) {
+        description = `* [${jiraIssue.fields.summary}](${jiraIssueUrl})`;
+      }
+
+      if (trelloCardResults) {
+        if (description) {
+          description += '\n';
+        }
+
+        description += `* [${trelloCardResults.card.name}](${trelloCardResults.card.shortUrl})`;
+      }
+
       const milestone = await this.createMilestone({
         due: now,
-        description: `* [${card.name}](${card.shortUrl})`,
+        description,
       });
 
-      result += `\nAssigning PR to milestone: ${milestone.number}`;
+      logMessages.push(`\nAssigning PR to milestone: ${milestone.number}`);
 
       await this.github.issues.update({
         owner: this.repo.owner,
@@ -125,13 +128,20 @@ export class PullRequestMerged extends WorkflowBase {
             releaseName += releaseNameMatches[i];
           }
 
-          result += `\nCreating github release: ${releaseName}... `;
+          logMessages.push(`\nCreating github release: ${releaseName}... `);
 
-          let releaseMessage = '## Trello Card(s)';
-          releaseMessage += `\n* [${card.name}](${card.shortUrl})`;
-
-          releaseMessage += '\n\n## Pull Request(s)';
+          let releaseMessage = '\n\n## Pull Request(s)';
           releaseMessage += `\n* [${this.payload.pull_request.title}](${this.payload.pull_request.html_url})`;
+
+          if (jiraIssue) {
+            releaseMessage += '\n\n## Jira Issue(s)';
+            releaseMessage += `\n* [${jiraIssue.fields.summary}](${jiraIssueUrl})`;
+          }
+
+          if (trelloCardResults) {
+            releaseMessage += '\n\n## Trello Card(s)';
+            releaseMessage += `\n* [${trelloCardResults.card.name}](${trelloCardResults.card.shortUrl})`;
+          }
 
           releaseMessage += '\n\n## Milestone(s)';
           releaseMessage += `\n* [${milestone.title}](${milestone.html_url})`;
@@ -144,28 +154,40 @@ export class PullRequestMerged extends WorkflowBase {
             name: releaseName,
             body: releaseMessage,
           });
-          result += `Done!`;
+          logMessages.push(`Done!`);
         } else {
-          result += `\nCould not figure out how to name the release :(`;
+          logMessages.push(`\nCould not figure out how to name the release :(`);
         }
       }
 
-      result += `\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${card.id}... `;
-      await this.trello.addAttachmentToCard({
-        cardId: card.id,
-        name: 'github-milestone',
-        url: milestone.html_url,
-      });
-      result += 'Done!';
+      if (this.jira && jiraIssue) {
+        logMessages.push(`\nAdding milestone url (${milestone.html_url}) as remote link to jira issue: ${jiraIssue.key}... `);
+        await this.jira.addRemoteLinkToIssue({
+          issueIdOrKey: jiraIssue.key,
+          name: 'github-milestone',
+          url: milestone.html_url,
+        });
+      }
+
+      if (trelloCardResults) {
+        logMessages.push(`\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${trelloCardResults.card.id}... `);
+        await this.trello.addAttachmentToCard({
+          cardId: trelloCardResults.card.id,
+          name: 'github-milestone',
+          url: milestone.html_url,
+        });
+      }
+
+      logMessages.push('\nDone!');
     } catch (ex) {
       if (ex instanceof Error && ex.stack) {
-        result += `\n${ex.stack}`;
+        logMessages.push(`\n${ex.stack}`);
       }
 
       console.error(ex);
     }
 
-    return result;
+    return logMessages.join('');
   }
 
   private async createMilestone({ due, title = `Deploy ${due}`, description }: ICreateMilestoneParams): Promise<IssuesCreateMilestoneResponse> {

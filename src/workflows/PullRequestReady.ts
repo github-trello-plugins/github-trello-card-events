@@ -1,19 +1,21 @@
-import type { ICard } from '../types/trello';
-
 import type { IWorkflowBaseParams } from './WorkflowBase.js';
 import { WorkflowBase } from './WorkflowBase.js';
 
 interface IPullRequestReadyParams extends IWorkflowBaseParams {
   destinationList: string;
+  destinationStatus: string;
 }
 
 export class PullRequestReady extends WorkflowBase {
   public destinationList: string;
 
+  public destinationStatus: string;
+
   public constructor(params: IPullRequestReadyParams) {
     super(params);
 
     this.destinationList = params.destinationList;
+    this.destinationStatus = params.destinationStatus;
   }
 
   public async execute(): Promise<string> {
@@ -22,59 +24,55 @@ export class PullRequestReady extends WorkflowBase {
     }
 
     const branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
-    const cardNumberMatches = /\d+/g.exec(branchName);
-    let cardNumber;
-    if (cardNumberMatches?.length) {
-      [cardNumber] = cardNumberMatches;
+
+    const logMessages = [`Starting PullRequestReady workflow\n-----------------`];
+
+    const trelloCardResults = await this.getTrelloCardDetails(branchName, this.destinationList, logMessages);
+    const jiraIssue = await this.getJiraIssue(branchName, logMessages);
+
+    const urls: string[] = [];
+    if (trelloCardResults) {
+      logMessages.push(`\nFound Trello card number (${trelloCardResults.card.idShort}) in branch: ${branchName}`);
+      urls.push(trelloCardResults.card.shortUrl);
     }
 
-    if (!cardNumber) {
-      console.log(JSON.stringify(this.payload));
-      return `PullRequestReady: Could not find card number in branch name\n${JSON.stringify(this.payload)}`;
+    let jiraIssueUrl: string | undefined;
+    if (jiraIssue) {
+      logMessages.push(`\nFound JIRA issue (${jiraIssue.key}) in branch: ${branchName}`);
+      jiraIssueUrl = `${this.jira?.baseUrl ?? ''}/browse/${jiraIssue.key}`;
+      urls.push(jiraIssueUrl);
     }
 
-    let result = `Starting PullRequestReady workflow\n-----------------`;
-    result += `\nFound card number (${cardNumber}) in branch: ${branchName}`;
-
-    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
-    result += `\n${getBoardNameDetails}`;
-
-    if (trelloBoardName) {
-      result += `\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`;
-    } else {
-      result += `\nUnable to find board name based on card prefix in branch name: ${branchName}`;
-      throw new Error(result);
-    }
-
-    const board = await this.getBoard(trelloBoardName);
-    const list = this.getList(board, this.destinationList);
-
-    let card: ICard;
-
-    try {
-      card = await this.getCard({
-        boardId: board.id,
-        cardNumber,
-      });
-    } catch (ex) {
-      if (ex instanceof Error) {
-        ex.message = `${result}\n${ex.message}`;
-      } else {
-        (ex as Error).message = result;
-      }
-
-      throw ex;
+    if (!trelloCardResults && !jiraIssue) {
+      logMessages.push(`\nCould not find trello card or jira issue\n${JSON.stringify(this.payload)}`);
+      throw new Error(logMessages.join(''));
     }
 
     // Update issue with card link and apply labels
     let body = this.payload.pull_request.body ?? '';
-    if (!body.includes(card.shortUrl)) {
+    // eslint-disable-next-line security/detect-non-literal-regexp
+    const hasFooterLinksRegEx = new RegExp(`(?:^|---\\n)(?:${urls.join('|')})$`, 'gim');
+
+    if (body && !hasFooterLinksRegEx.test(body)) {
+      body += '\n\n---';
+    }
+
+    if (jiraIssueUrl && !body.includes(jiraIssueUrl)) {
       if (body) {
-        body += '\n\n';
+        body += '\n';
       }
 
-      body += card.shortUrl;
-      result += `\nAdding card shortUrl to PR body`;
+      body += jiraIssueUrl;
+      logMessages.push(`\nAdding jira issue link to PR body`);
+    }
+
+    if (trelloCardResults && !body.includes(trelloCardResults.card.shortUrl)) {
+      if (body) {
+        body += '\n';
+      }
+
+      body += trelloCardResults.card.shortUrl;
+      logMessages.push(`\nAdding card shortUrl to PR body`);
     }
 
     const labels = new Set<string>();
@@ -86,19 +84,19 @@ export class PullRequestReady extends WorkflowBase {
     }
 
     try {
-      if (card.labels.length) {
-        result += `\nGetting labels for repository... `;
+      if (trelloCardResults?.card.labels.length) {
+        logMessages.push(`\nGetting labels for repository... `);
         const githubRepoLabels = await this.github.issues.listLabelsForRepo({
           owner: this.repo.owner,
           repo: this.repo.repo,
         });
-        result += 'Done!';
+        logMessages.push('Done!');
 
-        for (const label of card.labels) {
+        for (const label of trelloCardResults.card.labels) {
           const labelName = label.name.toLowerCase();
           for (const githubLabel of githubRepoLabels.data) {
             if (labelName === githubLabel.name.toLowerCase()) {
-              result += `\nAdding label: ${githubLabel.name}`;
+              logMessages.push(`\nAdding label: ${githubLabel.name}`);
               labels.add(githubLabel.name);
               break;
             }
@@ -108,14 +106,14 @@ export class PullRequestReady extends WorkflowBase {
     } catch (ex) {
       // Not critical if assigning labels fails
       if (ex instanceof Error && ex.stack) {
-        result += `\n${ex.stack}`;
+        logMessages.push(`\n${ex.stack}`);
       }
 
       console.error(ex);
     }
 
     try {
-      result += `\nUpdating PR with card url and labels... `;
+      logMessages.push(`\nUpdating PR with card url and labels... `);
       await this.github.issues.update({
         owner: this.repo.owner,
         repo: this.repo.repo,
@@ -124,11 +122,11 @@ export class PullRequestReady extends WorkflowBase {
         body,
         labels: Array.from(labels),
       });
-      result += 'Done!';
+      logMessages.push('Done!');
     } catch (ex) {
-      // Not critical if updating github PR fails
+      // Not critical if updating GitHub PR fails
       if (ex instanceof Error && ex.stack) {
-        result += `\n${ex.stack}`;
+        logMessages.push(`\n${ex.stack}`);
       }
 
       console.error(ex);
@@ -145,13 +143,30 @@ export class PullRequestReady extends WorkflowBase {
       comment += ` - ${this.payload.pull_request.html_url}`;
     }
 
-    const moveCardResult = await this.moveCard({
-      card,
-      list,
-      comment,
-    });
+    if (this.jira && jiraIssue) {
+      logMessages.push(`\nAdding PR opened comment to jira issue: ${jiraIssue.key}... `);
 
-    result += `\n${moveCardResult}`;
-    return result;
+      const updateJiraIssueResult = await this.updateJiraIssue({
+        issueIdOrKey: jiraIssue.key,
+        status: this.destinationStatus,
+        comment,
+      });
+
+      logMessages.push(`\n${updateJiraIssueResult}`);
+    }
+
+    if (trelloCardResults) {
+      logMessages.push(`\nAdding PR opened comment to trello card: ${trelloCardResults.card.id}... `);
+      const moveCardResult = await this.moveCard({
+        ...trelloCardResults,
+        comment,
+      });
+
+      logMessages.push(`\n${moveCardResult}`);
+    }
+
+    logMessages.push('\nDone!');
+
+    return logMessages.join('');
   }
 }

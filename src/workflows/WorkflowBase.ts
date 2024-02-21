@@ -1,12 +1,15 @@
 import type { Octokit } from '@octokit/rest';
 
 import { getGitHubClient } from '../services/githubService.js';
+import { JiraService } from '../services/jiraService';
 import { TrelloService } from '../services/trelloService.js';
 import type { IWebhookPayload } from '../types/github/index.js';
+import type { Issue } from '../types/jira/index.js';
 import type { IBoard, ICard, IList } from '../types/trello/index.js';
 
 export interface IWorkflowBaseParams {
   boardsAndBranchNamePrefixes: Record<string, string>;
+  jiraKeyPrefix?: string;
   eventPayload: IWebhookPayload;
 }
 
@@ -21,9 +24,21 @@ interface IMoveCardParams {
   comment?: string;
 }
 
+interface IUpdateJiraStatusParams {
+  issueIdOrKey: string;
+  status: string;
+  comment?: string;
+}
+
 interface IRepo {
   owner: string;
   repo: string;
+}
+
+export interface IGetTrelloCardDetailsResult {
+  card: ICard;
+  list: IList;
+  board: IBoard;
 }
 
 export abstract class WorkflowBase {
@@ -31,15 +46,24 @@ export abstract class WorkflowBase {
 
   protected readonly trello: TrelloService;
 
+  protected readonly jira: JiraService | undefined;
+
   protected readonly payload: IWebhookPayload;
 
   protected readonly boardsAndBranchNamePrefixes: Record<string, string>;
 
-  public constructor({ boardsAndBranchNamePrefixes, eventPayload }: IWorkflowBaseParams) {
+  protected readonly jiraKeyPrefix?: string;
+
+  public constructor({ boardsAndBranchNamePrefixes, jiraKeyPrefix, eventPayload }: IWorkflowBaseParams) {
     this.github = getGitHubClient();
     this.trello = new TrelloService();
+    if (jiraKeyPrefix) {
+      this.jira = new JiraService();
+    }
+
     this.boardsAndBranchNamePrefixes = boardsAndBranchNamePrefixes;
     this.payload = eventPayload;
+    this.jiraKeyPrefix = jiraKeyPrefix;
   }
 
   public get repo(): IRepo {
@@ -50,6 +74,98 @@ export abstract class WorkflowBase {
   }
 
   public abstract execute(): Promise<string>;
+
+  protected async getJiraIssue(branchName: string, logMessages: string[]): Promise<Issue | undefined> {
+    if (!this.payload.pull_request) {
+      throw new Error(`There were no pull_request details with payload: ${JSON.stringify(this.payload)}`);
+    }
+
+    if (this.jira && this.jiraKeyPrefix) {
+      // eslint-disable-next-line security/detect-non-literal-regexp
+      const jiraKeyRegEx = new RegExp(`${this.jiraKeyPrefix}[- ](\\d+)`, 'i');
+
+      // Try to find the JIRA issue key from the PR title first and otherwise fallback to branch name
+      let jiraKey: string | undefined;
+      const prNameMatches = jiraKeyRegEx.exec(this.payload.pull_request.title);
+      if (prNameMatches?.length) {
+        jiraKey = `${this.jiraKeyPrefix}-${prNameMatches[1]}`;
+      }
+
+      if (!jiraKey) {
+        const branchNameMatches = jiraKeyRegEx.exec(branchName);
+        if (branchNameMatches?.length) {
+          jiraKey = `${this.jiraKeyPrefix}-${branchNameMatches[1]}`;
+        }
+      }
+
+      if (jiraKey) {
+        try {
+          return await this.jira.getIssue(jiraKey);
+        } catch (ex) {
+          if (ex instanceof Error) {
+            ex.message = `${logMessages.join('')}\n${ex.message}`;
+          } else {
+            (ex as Error).message = logMessages.join('');
+          }
+
+          throw ex;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  protected async getTrelloCardDetails(branchName: string, listName: string, logMessages: string[]): Promise<IGetTrelloCardDetailsResult | undefined> {
+    const [trelloBoardName, getBoardNameDetails] = this.getBoardNameFromBranchName(branchName);
+    logMessages.push(`\n${getBoardNameDetails}`);
+
+    if (trelloBoardName) {
+      logMessages.push(`\nUsing board (${trelloBoardName}) based on branch prefix: ${branchName}`);
+    } else {
+      logMessages.push(`\nUnable to find board name based on card prefix in branch name: ${branchName}`);
+      throw new Error(logMessages.join(''));
+    }
+
+    const trelloBranchPrefix = this.boardsAndBranchNamePrefixes[trelloBoardName] ?? '';
+    // eslint-disable-next-line security/detect-non-literal-regexp
+    const cardNumberRegEx = new RegExp(`${trelloBranchPrefix}(\\d+)`, 'i');
+    const cardNumberMatches = cardNumberRegEx.exec(branchName);
+    let cardNumber: string | undefined;
+    if (cardNumberMatches?.length) {
+      cardNumber = cardNumberMatches[1];
+    }
+
+    if (!cardNumber) {
+      logMessages.push(`\nUnable to find card number in branch name: ${branchName}`);
+      return undefined;
+    }
+
+    const board = await this.getBoard(trelloBoardName);
+    const list = this.getList(board, listName);
+    let card: ICard;
+
+    try {
+      card = await this.getCard({
+        boardId: board.id,
+        cardNumber,
+      });
+    } catch (ex) {
+      if (ex instanceof Error) {
+        ex.message = `${logMessages.join('')}\n${ex.message}`;
+      } else {
+        (ex as Error).message = logMessages.join('');
+      }
+
+      throw ex;
+    }
+
+    return {
+      board,
+      list,
+      card,
+    };
+  }
 
   protected getBoardNameFromBranchName(branchName: string): [string | undefined, string] {
     let result = `Using board/branch mapping: ${JSON.stringify(this.boardsAndBranchNamePrefixes)}`;
@@ -158,6 +274,39 @@ export abstract class WorkflowBase {
     }
 
     result += `\nMoved card ${card.id} to list: ${list.name}`;
+    return result;
+  }
+
+  protected async updateJiraIssue({ issueIdOrKey, status, comment }: IUpdateJiraStatusParams): Promise<string> {
+    if (!this.jira) {
+      return 'No jira service';
+    }
+
+    let result = `Updating jira issue status to: ${status}`;
+
+    await this.jira.updateIssue({
+      issueIdOrKey,
+      status,
+    });
+
+    if (comment) {
+      try {
+        result += `\nAdding comment to jira issue: ${comment}`;
+        await this.jira.addCommentToIssue({
+          issueIdOrKey,
+          text: comment,
+        });
+      } catch (ex) {
+        if (ex instanceof Error && ex.stack) {
+          result += `\n${ex.stack}`;
+        }
+
+        // Log, but ignore since this is a bonus and not the primary action
+        console.error(ex);
+      }
+    }
+
+    result += `\nUpdated issue ${issueIdOrKey} status: ${status}`;
     return result;
   }
 }
