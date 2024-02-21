@@ -1,7 +1,7 @@
 import type { Octokit } from '@octokit/rest';
 
 import { getGitHubClient } from '../services/githubService.js';
-import { JiraService } from '../services/jiraService';
+import { JiraService } from '../services/jiraService.js';
 import { TrelloService } from '../services/trelloService.js';
 import type { IWebhookPayload } from '../types/github/index.js';
 import type { Issue } from '../types/jira/index.js';
