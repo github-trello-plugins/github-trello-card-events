@@ -2,7 +2,7 @@ import { URL } from 'url';
 
 import axios from 'axios';
 
-import type { JiraError, Issue } from '../types/jira/index.js';
+import type { JiraError, Issue, Transition } from '../types/jira/index.js';
 
 declare const process: {
   env: {
@@ -55,17 +55,50 @@ export class JiraService {
     return issueResponse.data as Issue;
   }
 
-  public async updateIssue({ issueIdOrKey, status }: { issueIdOrKey: string; status: string }): Promise<void> {
-    const updateFields: Partial<Issue['fields']> = {
-      status: {
-        name: status,
-      },
-    };
+  public async getTransitions(issueIdOrKey: string): Promise<Transition[]> {
+    const getIssueUrl = new URL(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}`);
 
-    await axios.put(
-      `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}`,
+    interface TransitionsResponse {
+      transitions: Transition[];
+    }
+
+    const issueResponse = await axios.get<JiraError | TransitionsResponse>(getIssueUrl.href, {
+      auth: {
+        username: this.email,
+        password: this.token,
+      },
+      timeout: 20000,
+    });
+
+    const errorResponse = issueResponse.data as Partial<JiraError>;
+    if (errorResponse.errorMessage?.length) {
+      throw new Error(`Error fetching jira issue: ${errorResponse.errorMessage.join('\n')}`);
+    }
+
+    return (issueResponse.data as TransitionsResponse).transitions;
+  }
+
+  public async updateIssueStatus({ issueIdOrKey, status }: { issueIdOrKey: string; status: string }): Promise<void> {
+    const transitions = await this.getTransitions(issueIdOrKey);
+
+    let transitionId: string | undefined;
+    for (const transition of transitions) {
+      if (transition.name === status) {
+        transitionId = transition.id;
+        break;
+      }
+    }
+
+    if (!transitionId) {
+      throw new Error(`Unable to find transition for status: ${status}. Available transitions: ${transitions.map((transition) => transition.name).join(', ')}`);
+    }
+
+    await axios.post(
+      `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/transitions`,
       {
-        fields: updateFields,
+        transition: {
+          id: transitionId,
+        },
       },
       {
         auth: {

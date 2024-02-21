@@ -284,7 +284,7 @@ export abstract class WorkflowBase {
 
     let result = `Updating jira issue status to: ${status}`;
 
-    await this.jira.updateIssue({
+    await this.jira.updateIssueStatus({
       issueIdOrKey,
       status,
     });
