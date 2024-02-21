@@ -90,7 +90,7 @@ export class JiraService {
     }
 
     if (!transitionId) {
-      throw new Error(`Unable to find transition for status: ${status}. Available transitions: ${transitions.map((transition) => transition.name).join(', ')}`);
+      throw new Error(`Unable to find jira transition for issue ${issueIdOrKey} matching status: ${status}. Available transitions: ${transitions.map((transition) => transition.name).join(', ')}`);
     }
 
     await axios.post(
