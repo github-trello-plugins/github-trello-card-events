@@ -70,26 +70,26 @@ export class PullRequestMerged extends WorkflowBase {
       comment = `Pull request merged!`;
     }
 
-    if (jiraIssue) {
-      const updateJiraIssueResult = await this.updateJiraIssue({
-        issueIdOrKey: jiraIssue.key,
-        status: this.destinationStatus,
-        comment,
-      });
-
-      logMessages.push(`\n${updateJiraIssueResult}`);
-    }
-
-    if (trelloCardResults) {
-      const moveCardResult = await this.moveCard({
-        ...trelloCardResults,
-        comment,
-      });
-
-      logMessages.push(`\n${moveCardResult}`);
-    }
-
     try {
+      if (jiraIssue) {
+        const updateJiraIssueResult = await this.updateJiraIssue({
+          issueIdOrKey: jiraIssue.key,
+          status: this.destinationStatus,
+          comment,
+        });
+
+        logMessages.push(`\n${updateJiraIssueResult}`);
+      }
+
+      if (trelloCardResults) {
+        const moveCardResult = await this.moveCard({
+          ...trelloCardResults,
+          comment,
+        });
+
+        logMessages.push(`\n${moveCardResult}`);
+      }
+
       const now = new Date().toISOString();
       let description = '';
       if (jiraIssue) {

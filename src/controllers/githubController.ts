@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 
+import type { AxiosError } from 'axios';
 import type { Request, Response } from 'express';
 
 import { postErrorMessage } from '../services/slackService.js';
@@ -149,6 +150,9 @@ export async function index(req: Request<unknown, unknown, IndexRequestBody, Ind
 
     return res.status(500).json({
       ok: false,
+      error: (ex as Error).message,
+      stack: (ex as Error).stack,
+      response: (ex as AxiosError).response,
       err: ex,
     });
   }
