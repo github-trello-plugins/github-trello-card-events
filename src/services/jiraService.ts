@@ -56,7 +56,7 @@ export class JiraService {
   }
 
   public async getTransitions(issueIdOrKey: string): Promise<Transition[]> {
-    const getIssueUrl = new URL(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}`);
+    const getIssueUrl = new URL(`${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/transitions`);
 
     interface TransitionsResponse {
       transitions: Transition[];
