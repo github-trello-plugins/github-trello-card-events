@@ -4,6 +4,7 @@ import { getGitHubClient } from '../services/githubService.js';
 import { JiraService } from '../services/jiraService.js';
 import { TrelloService } from '../services/trelloService.js';
 import type { IWebhookPayload } from '../types/github/index.js';
+import type { BlockContent } from '../types/jira/AtlassianDataFormat/index.js';
 import type { Issue } from '../types/jira/index.js';
 import type { IBoard, ICard, IList } from '../types/trello/index.js';
 
@@ -27,7 +28,7 @@ interface IMoveCardParams {
 interface IUpdateJiraStatusParams {
   issueIdOrKey: string;
   status: string;
-  comment?: string;
+  comment?: BlockContent[];
 }
 
 interface IRepo {
@@ -289,12 +290,12 @@ export abstract class WorkflowBase {
       status,
     });
 
-    if (comment) {
+    if (comment?.length) {
       try {
-        result += `\nAdding comment to jira issue: ${comment}`;
+        result += `\nAdding comment to jira issue:\n${JSON.stringify(comment, null, 1)}`;
         await this.jira.addCommentToIssue({
           issueIdOrKey,
-          text: comment,
+          comment,
         });
       } catch (ex) {
         if (ex instanceof Error && ex.stack) {

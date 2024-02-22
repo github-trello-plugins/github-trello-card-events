@@ -1,3 +1,5 @@
+import type { BlockContent } from '../types/jira/AtlassianDataFormat/index.js';
+
 import type { IWorkflowBaseParams } from './WorkflowBase.js';
 import { WorkflowBase } from './WorkflowBase.js';
 
@@ -24,13 +26,44 @@ export class WorkingOnCard extends WorkflowBase {
     }
 
     let comment: string | undefined;
+    const jiraComment: BlockContent[] = [];
     let branchName: string;
     if (this.payload.pull_request) {
       branchName = this.payload.pull_request.head.ref.trim().replace(/\W+/g, '-').toLowerCase();
       if (this.payload.sender) {
         comment = `Pull request closed by [${this.payload.sender.login}](${this.payload.sender.html_url})`;
+        jiraComment.push({
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: `Pull request closed by `,
+            },
+            {
+              type: 'text',
+              text: this.payload.sender.login,
+              marks: [
+                {
+                  type: 'link',
+                  attrs: {
+                    href: this.payload.sender.html_url,
+                  },
+                },
+              ],
+            },
+          ],
+        });
       } else {
         comment = `Pull request closed!`;
+        jiraComment.push({
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: `Pull request closed!`,
+            },
+          ],
+        });
       }
     } else {
       branchName = this.payload.ref.trim().replace(/\W+/g, '-').toLowerCase();
@@ -59,7 +92,7 @@ export class WorkingOnCard extends WorkflowBase {
         const updateJiraIssueResult = await this.updateJiraIssue({
           issueIdOrKey: jiraIssue.key,
           status: this.destinationStatus,
-          comment,
+          comment: jiraComment,
         });
 
         logMessages.push(`\n${updateJiraIssueResult}`);

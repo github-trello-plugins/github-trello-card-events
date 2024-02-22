@@ -2,6 +2,7 @@ import { URL } from 'url';
 
 import axios from 'axios';
 
+import type { BlockContent, DocNode } from '../types/jira/AtlassianDataFormat/index.js';
 import type { JiraError, Issue, Transition } from '../types/jira/index.js';
 
 declare const process: {
@@ -130,11 +131,17 @@ export class JiraService {
     );
   }
 
-  public async addCommentToIssue({ issueIdOrKey, text }: { issueIdOrKey: string; text: string }): Promise<void> {
+  public async addCommentToIssue({ issueIdOrKey, comment }: { issueIdOrKey: string; comment: BlockContent[] }): Promise<void> {
+    const doc: DocNode = {
+      type: 'doc',
+      version: 1,
+      content: comment,
+    };
+
     await axios.post(
       `${this.baseUrl}/rest/api/3/issue/${issueIdOrKey}/comment`,
       {
-        body: text,
+        body: doc,
       },
       {
         auth: {

@@ -1,3 +1,5 @@
+import type { BlockContent } from '../types/jira/AtlassianDataFormat/index.js';
+
 import type { IWorkflowBaseParams } from './WorkflowBase.js';
 import { WorkflowBase } from './WorkflowBase.js';
 
@@ -133,14 +135,73 @@ export class PullRequestReady extends WorkflowBase {
     }
 
     let comment: string | undefined;
+    const jiraComment: BlockContent[] = [];
     if (this.payload.sender) {
       comment = `Pull request ${this.payload.action ?? 'opened'} by [${this.payload.sender.login}](${this.payload.sender.html_url})`;
+
+      jiraComment.push({
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: `Pull request ${this.payload.action ?? 'opened'} by `,
+          },
+          {
+            type: 'text',
+            text: this.payload.sender.login,
+            marks: [
+              {
+                type: 'link',
+                attrs: {
+                  href: this.payload.sender.html_url,
+                },
+              },
+            ],
+          },
+        ],
+      });
     } else {
       comment = `Pull request ${this.payload.action ?? 'opened'}!`;
+      jiraComment.push({
+        type: 'paragraph',
+        content: [
+          {
+            type: 'text',
+            text: `Pull request ${this.payload.action ?? 'opened'}!`,
+          },
+        ],
+      });
     }
 
     if (this.payload.pull_request.html_url) {
       comment += ` - ${this.payload.pull_request.html_url}`;
+      jiraComment.push({
+        type: 'bulletList',
+        content: [
+          {
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: this.payload.pull_request.html_url,
+                    marks: [
+                      {
+                        type: 'link',
+                        attrs: {
+                          href: this.payload.pull_request.html_url,
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
     }
 
     if (this.jira && jiraIssue) {
@@ -149,7 +210,7 @@ export class PullRequestReady extends WorkflowBase {
       const updateJiraIssueResult = await this.updateJiraIssue({
         issueIdOrKey: jiraIssue.key,
         status: this.destinationStatus,
-        comment,
+        comment: jiraComment,
       });
 
       logMessages.push(`\n${updateJiraIssueResult}`);
