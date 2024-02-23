@@ -1,44 +1,55 @@
-# fly.toml app configuration file generated for github-trello-card-events on 2023-05-24T09:01:19-05:00
+# fly.toml app configuration file generated for github-trello-card-events on 2024-02-23T11:36:17-06:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "github-trello-card-events"
-primary_region = "iad"
-kill_signal = "SIGINT"
-kill_timeout = "5s"
-
-[build]
-  builder = "heroku/builder:22"
-
-[env]
-  PORT = "8080"
+app = 'github-trello-card-events'
+primary_region = 'iad'
+kill_signal = 'SIGINT'
+kill_timeout = '5s'
 
 [experimental]
   auto_rollback = true
 
-[[services]]
-  protocol = "tcp"
-  internal_port = 8080
-  processes = ["app"]
+[build]
+  builder = 'heroku/builder:22'
 
-  [[services.ports]]
+[env]
+  PORT = '8080'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+  processes = ['app']
+
+[[services.ports]]
     port = 80
-    handlers = ["http"]
+    handlers = ['http']
     force_https = true
 
-  [[services.ports]]
+[[services.ports]]
     port = 443
-    handlers = ["tls", "http"]
-    http_options = { response = { headers = { via = false, x-powered-by = false, server = false, fly-request-id = false } } }
+    handlers = ['tls', 'http']
+
+    [services.ports.http_options]
+      [services.ports.http_options.response]
+        [services.ports.http_options.response.headers]
+          fly-request-id = false
+          server = false
+          via = false
+          x-powered-by = false
 
   [services.concurrency]
-    type = "connections"
+    type = 'connections'
     hard_limit = 25
     soft_limit = 20
 
-  [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "2s"
-    grace_period = "1s"
-    restart_limit = 0
+[[services.tcp_checks]]
+    interval = '15s'
+    timeout = '2s'
+    grace_period = '1s'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
