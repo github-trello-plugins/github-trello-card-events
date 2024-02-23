@@ -198,7 +198,7 @@ export class PullRequestMerged extends WorkflowBase {
         logMessages.push(`\nAdding milestone url (${milestone.html_url}) as remote link to jira issue: ${jiraIssue.key}... `);
         await this.jira.addRemoteLinkToIssue({
           issueIdOrKey: jiraIssue.key,
-          name: 'github-milestone',
+          name: `GitHub Milestone: ${milestone.title}`,
           url: milestone.html_url,
         });
       }
@@ -207,7 +207,7 @@ export class PullRequestMerged extends WorkflowBase {
         logMessages.push(`\nAdding milestone url (${milestone.html_url}) as attachment to trello card: ${trelloCardResults.card.id}... `);
         await this.trello.addAttachmentToCard({
           cardId: trelloCardResults.card.id,
-          name: 'github-milestone',
+          name: `GitHub Milestone: ${milestone.title}`,
           url: milestone.html_url,
         });
       }
