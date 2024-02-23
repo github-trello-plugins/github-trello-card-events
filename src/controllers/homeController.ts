@@ -1,3 +1,4 @@
+import type { AxiosError } from 'axios';
 import type { Request, Response } from 'express';
 import _ from 'lodash';
 
@@ -30,6 +31,9 @@ export async function healthCheck(_req: Request, res: Response): Promise<Respons
   } catch (ex) {
     return res.status(500).json({
       ok: false,
+      error: (ex as Error).message,
+      stack: (ex as Error).stack,
+      response: (ex as AxiosError).response,
       err: ex,
     });
   }
