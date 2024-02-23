@@ -14,6 +14,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: superfly/flyctl-actions/setup-flyctl@master
     - run: flyctl deploy -e GIT_REV=$GITHUB_SHA --remote-only
