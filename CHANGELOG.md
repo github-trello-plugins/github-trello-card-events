@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.0 - 2024-03-11
+
+- Update npms
+- Add support to update Jira issues
+
 ## 3.0.4 - 2024-02-07
 
 - Update npms
