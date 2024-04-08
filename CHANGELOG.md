@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1 - 2024-04-08
+
+- Update npms
+
 ## 3.1.0 - 2024-03-11
 
 - Update npms

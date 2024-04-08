@@ -159,7 +159,10 @@ export class PullRequestMerged extends WorkflowBase {
         if (releaseNameMatches) {
           let releaseName = '';
           for (let i = 1; i < releaseNameMatches.length; i += 1) {
-            releaseName += releaseNameMatches[i];
+            const releaseNameMatch = releaseNameMatches[i];
+            if (releaseNameMatch) {
+              releaseName += releaseNameMatch;
+            }
           }
 
           logMessages.push(`\nCreating github release: ${releaseName}... `);
