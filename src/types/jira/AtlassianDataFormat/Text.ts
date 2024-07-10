@@ -1,4 +1,4 @@
-import type { Mark } from './Mark';
+import type { Mark } from './Mark.js';
 
 export interface Text {
   type: 'text';

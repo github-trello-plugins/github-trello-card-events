@@ -1,4 +1,4 @@
-import type { TextContent } from './TextContent';
+import type { TextContent } from './TextContent.js';
 
 export interface Document {
   type: 'doc';

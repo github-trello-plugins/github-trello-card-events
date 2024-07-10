@@ -148,14 +148,13 @@ export class PullRequestMerged extends WorkflowBase {
       await this.github.issues.update({
         owner: this.repo.owner,
         repo: this.repo.repo,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         issue_number: this.payload.pull_request.number,
         milestone: milestone.number,
       });
 
       if (this.createRelease) {
         console.log('Determining release name');
-        const releaseNameMatches = /^([0-9]+)-([0-9]+)-([0-9]+)T([0-9]+):([0-9]+):([0-9]+)/.exec(now);
+        const releaseNameMatches = /^(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)/.exec(now);
         if (releaseNameMatches) {
           let releaseName = '';
           for (let i = 1; i < releaseNameMatches.length; i += 1) {
@@ -186,7 +185,6 @@ export class PullRequestMerged extends WorkflowBase {
           await this.github.repos.createRelease({
             owner: this.repo.owner,
             repo: this.repo.repo,
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             tag_name: releaseName,
             name: releaseName,
             body: releaseMessage,
@@ -234,7 +232,6 @@ export class PullRequestMerged extends WorkflowBase {
       title,
       description,
       state: this.closeMilestone ? 'closed' : 'open',
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       due_on: due,
     });
 

@@ -1,4 +1,4 @@
-import type { Document } from './Document';
+import type { Document } from './Document.js';
 
 export interface Issue {
   id: string;

@@ -1,4 +1,4 @@
-import type { Paragraph } from './Paragraph';
+import type { Paragraph } from './Paragraph.js';
 
 export interface ListItem {
   type: 'listItem';

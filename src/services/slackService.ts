@@ -27,14 +27,13 @@ export interface IPostMessageTextParams extends IPostMessageBaseParams {
 }
 
 interface IPayload {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   icon_emoji?: string;
   channel?: string;
   text?: string;
   attachments?: {
     title?: string;
     text: string;
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+
     mrkdwn_in: string[];
     color?: string;
   }[];
@@ -48,7 +47,6 @@ export interface IPostErrorMessageParams {
 export async function postMessage(args: IPostMessageMarkdownParams | IPostMessageTextParams): Promise<void> {
   // NOTE: https://api.slack.com/reference/messaging/attachments
   const payload: IPayload = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     icon_emoji: args.icon,
     channel: args.channel,
   };
@@ -60,7 +58,7 @@ export async function postMessage(args: IPostMessageMarkdownParams | IPostMessag
       {
         title: args.title,
         text: args.message,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
+
         mrkdwn_in: ['text'],
         color: args.borderColor,
       },

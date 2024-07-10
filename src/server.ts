@@ -13,20 +13,18 @@ declare const process: {
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 const app = express() as Express;
 
 app.disable('x-powered-by');
 app.set('port', process.env.PORT ?? 8080);
 app.use(
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   bodyParser.json({
     verify(req: IRequestWithRawBody, _: express.Response, rawBody: Buffer) {
       req.rawBody = rawBody;
     },
   }),
 );
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
 app.use(errorHandler());
 
 // Hook up routes

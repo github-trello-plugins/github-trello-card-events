@@ -1,4 +1,4 @@
-import type { ListItem } from './ListItem';
+import type { ListItem } from './ListItem.js';
 
 export interface BulletList {
   type: 'bulletList';

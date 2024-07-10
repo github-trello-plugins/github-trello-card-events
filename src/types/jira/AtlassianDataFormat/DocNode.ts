@@ -1,4 +1,4 @@
-import type { BlockContent } from './BlockContent';
+import type { BlockContent } from './BlockContent.js';
 
 export interface DocNode {
   type: 'doc';
