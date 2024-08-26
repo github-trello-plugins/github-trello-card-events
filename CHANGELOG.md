@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.1 - 2024-08-26
+
+- Update npms
+
 ## 3.2.0 - 2024-07-10
 
 - Upgrade eslint to flat config
