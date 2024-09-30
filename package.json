@@ -1,6 +1,6 @@
 {
   "name": "github-trello-card-events",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "main": "dist/server.js",
   "type": "module",
   "engines": {
@@ -8,10 +8,10 @@
   },
   "dependencies": {
     "@octokit/rest": "21.0.2",
-    "axios": "1.7.5",
-    "body-parser": "1.20.2",
+    "axios": "1.7.7",
+    "body-parser": "1.20.3",
     "errorhandler": "1.5.1",
-    "express": "4.19.2",
+    "express": "4.21.0",
     "lodash": "4.17.21",
     "moment-timezone": "0.5.45"
   },
@@ -19,16 +19,16 @@
     "@octokit/openapi-types": "22.2.0",
     "@types/errorhandler": "1.5.3",
     "@types/express": "4.17.21",
-    "@types/lodash": "4.17.7",
-    "eslint": "9.9.1",
-    "eslint-config-decent": "2.2.0",
-    "husky": "9.1.5",
-    "lint-staged": "15.2.9",
-    "markdownlint-cli": "~0.41.0",
+    "@types/lodash": "4.17.9",
+    "eslint": "9.11.1",
+    "eslint-config-decent": "2.2.2",
+    "husky": "9.1.6",
+    "lint-staged": "15.2.10",
+    "markdownlint-cli": "~0.42.0",
     "npm-run-all": "~4.1.5",
     "prettier": "3.3.3",
     "prettier-plugin-packagejson": "2.5.2",
-    "typescript": "5.5.4"
+    "typescript": "5.6.2"
   },
   "license": "BSD-3-Clause",
   "scripts": {

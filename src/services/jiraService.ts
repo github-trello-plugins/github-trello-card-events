@@ -3,7 +3,7 @@ import { URL } from 'url';
 import axios from 'axios';
 
 import type { BlockContent, DocNode } from '../types/jira/AtlassianDataFormat/index.js';
-import type { JiraError, Issue, Transition } from '../types/jira/index.js';
+import type { Issue, JiraError, Transition } from '../types/jira/index.js';
 
 declare const process: {
   env: {
